@@ -59,19 +59,26 @@
 
     </LinearLayout>
 
-    <EditText
-        android:id="@+id/editText"
+    <com.github.florent37.materialtextfield.MaterialTextField
         android:layout_width="match_parent"
-        android:layout_height="80dp"
-        android:layout_margin="13dp"
-        android:background="@drawable/roundimg"
-        android:backgroundTint="@color/colorRound"
-        android:ems="10"
-        android:hint="Input Data"
-        android:inputType="textPersonName"
+        android:layout_height="wrap_content"
         android:padding="15dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/linearLayout" />
+        app:layout_constraintTop_toBottomOf="@+id/linearLayout"
+        app:layout_constraintVertical_bias="0.0"
+        app:mtf_image="@drawable/ic_main"
+        app:mtf_labelColor="#666">
+
+        <EditText
+            android:id="@+id/editText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Input Data"
+            android:textColor="#333"
+            android:textSize="15sp" />
+
+    </com.github.florent37.materialtextfield.MaterialTextField>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
