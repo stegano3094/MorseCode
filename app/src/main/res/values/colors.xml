@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#00FFFF</color>
+    <color name="colorPrimaryDark">#00FFFF</color>
+    <color name="colorAccent">#33CC33</color>
+
+    <color name="colorGradStart">#00FFFF</color>
+    <color name="colorGradStop">#0099FF</color>
+
+    <color name="colorRound">#33AAFF</color>
+
+    <color name="AppThemeTextColor">#000000</color>
+    <color name="AppThemeSubTextColor">#11111111</color>
+</resources>
