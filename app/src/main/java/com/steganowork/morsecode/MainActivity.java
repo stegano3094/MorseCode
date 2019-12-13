@@ -24,7 +24,7 @@ import java.util.HashMap;
 import java.util.regex.Pattern;
 
 public class MainActivity extends AppCompatActivity {
-    // MorseCode 이것도 수정21231123
+    // MorseCode APP
     String TAG = "MainActivity";
     private static HashMap<String, String> MorseKorean;
     private static HashMap<String, String> MorseEnglish;
