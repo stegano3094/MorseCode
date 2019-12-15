@@ -9,9 +9,6 @@
         app:showAsAction="ifRoom" >
         <menu >
             <item
-                android:id="@+id/change"
-                android:title="Change Language" />
-            <item
                 android:id="@+id/new_info"
                 android:title="Info" />
             <item

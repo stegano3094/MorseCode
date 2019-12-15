@@ -29,12 +29,11 @@
             android:backgroundTint="@color/colorRound"
             android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/textView4"
+            <com.jaredrummler.materialspinner.MaterialSpinner
+                android:id="@+id/spinner"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="15dp"
-                android:text="모스부호 번역" />
+                android:padding="15dp" />
 
             <ScrollView
                 android:layout_width="match_parent"
@@ -69,8 +68,10 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/linearLayout"
         app:layout_constraintVertical_bias="0.0"
-        app:mtf_image="@drawable/ic_main"
-        app:mtf_labelColor="#666">
+        app:mtf_image="@drawable/ic_input"
+        app:mtf_labelColor="#666"
+        app:mtf_openKeyboardOnFocus="true">
+
         <EditText
             android:id="@+id/editText"
             android:layout_width="match_parent"
