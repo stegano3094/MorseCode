@@ -1,7 +1,6 @@
 package com.steganowork.morsecode;
 
-import android.app.AlertDialog;
-import android.content.DialogInterface;
+import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -11,7 +10,6 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.View;
 import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -27,6 +25,8 @@ import java.util.regex.Pattern;
 
 public class MainActivity extends AppCompatActivity {
     String TAG = "MainActivity";
+    private BackPressCloseHandler backPressCloseHandler; // back key 객체 선언
+
     private static HashMap<String, String> MorseKorean;
     private static HashMap<String, String> MorseEnglish;
     private static HashMap<String, String> MorseNumber;
@@ -44,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);   // 화면꺼짐 방지
+        backPressCloseHandler = new BackPressCloseHandler(this);      // 뒤로가기 버튼
 
         // 필요한 변수 선언
         resultText = (TextView) findViewById(R.id.textView7);
@@ -57,15 +58,15 @@ public class MainActivity extends AppCompatActivity {
         InputMorseCode();  // 해시 코드값 넣기 (모스 데이터 삽입)
         languageAvailable = getResources().getStringArray(R.array.TranslationLanguage);  // 가능한 언어
 
-        MaterialSpinner spinner = (MaterialSpinner) findViewById(R.id.spinner);
+        MaterialSpinner spinner = (MaterialSpinner) findViewById(R.id.spinner);  // 스피너
         spinner.setItems(getResources().getStringArray(R.array.TranslationLanguage));
         spinner.setOnItemSelectedListener(new MaterialSpinner.OnItemSelectedListener<String>() {
             @Override public void onItemSelected(MaterialSpinner view, int position, long id, String item) {
-                Toast.makeText(getApplicationContext(), "Clicked : " + item, Toast.LENGTH_LONG).show();
                 ChangeMode(item);  // 모드 변경
             }
         });
-        // 실시간 번역
+
+        // 실시간 번역 -----------------------------------------------------------------------------
         mUpdateThread = new UpdateThread();  // 스레드 생성
         editText.addTextChangedListener(new TextWatcher() {
             @Override
@@ -129,11 +130,6 @@ public class MainActivity extends AppCompatActivity {
         languageState = "";
         languageState = getMode;
 
-        /*
-        <item>"언어 -> 모스부호"</item>
-        <item>"모스부호 -> 영어"</item>
-        <item>"모스부호 -> 한국어"</item>
-         */
         if (languageState.equals(languageAvailable[1]) || languageState.equals(languageAvailable[2])) {  // 모스부호 -> 영어, 한국어 등 으로 변환
             if(languageState.equals(languageAvailable[1])) {
                 editText.setHint("Input Morse Data");
@@ -277,7 +273,7 @@ public class MainActivity extends AppCompatActivity {
         for (int i = 0; i < txt.length; i++) {
             //Log.e(TAG, "txt" + i + ": " + txt[i]);
             assembleString += txt[i];
-            morsePattern = Pattern.matches("^[-*]*$", txt[i]);  // 하나씩 검사함 (모스패턴이면 true 아니면 false)
+            morsePattern = Pattern.matches("^[*-]*$", txt[i]);  // 하나씩 검사함 (모스패턴이면 true 아니면 false)
 
             if (txt[i].equals(" ")) {  // 띄어쓰기일 경우 띄어줌
                 morsePattern = true;  // 띄어쓰기는 검사가 안되서 직접 바꿔줌
@@ -301,12 +297,15 @@ public class MainActivity extends AppCompatActivity {
             String[] getSlice = assembleString.split(" ");
 
             for (int i = 0; i < getSlice.length; i++) {
-                Log.i(TAG, "getSlice[" + i + "] : " + getSlice[i]);
+                Log.i(TAG, "getSlice.length : " + getSlice.length + ", getSlice[" + i + "] : " + getSlice[i]);
+                if(getSlice[i].equals("")){  // 띄어쓰기는 지워지고 배열이 증가하여 다시 띄어쓰기를 넣어줌
+                    getSlice[i] = " ";
+                }
 
-                String NumValue = MorseNumber.get(getSlice[i]);
-                String SpeValue = MorseSpecial.get(getSlice[i]);
                 String EngValue = MorseEnglish.get(getSlice[i]);
                 String KorValue = MorseKorean.get(getSlice[i]);
+                String NumValue = MorseNumber.get(getSlice[i]);
+                String SpeValue = MorseSpecial.get(getSlice[i]);
                 Log.i(TAG, "EngValue : " + EngValue + ", KorValue : " + KorValue + ", SpeValue : " + SpeValue + ", NumValue : " + NumValue);
 
                 if (languageState.equals(languageAvailable[1])) {  // 모스부호 -> 영어 ===========================
@@ -614,7 +613,46 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // 뒤로가기 2번 누름 ===========================================================================
+    @Override
+    public void onBackPressed() {
+        backPressCloseHandler.onBackPressed();  // Back Key를 2번 눌러서 앱 종료
+    }
+
+    private class BackPressCloseHandler {
+        private long backKeyPressedTime = 0;
+        private Toast toast;
+        private Activity activity;
+
+        private BackPressCloseHandler(Activity context) {
+            this.activity = context;
+        }
+
+        private void onBackPressed() {
+            if (System.currentTimeMillis() > backKeyPressedTime + 2000) {
+                backKeyPressedTime = System.currentTimeMillis();
+                showGuide_Default();
+
+                return;
+            }
+            if (System.currentTimeMillis() <= backKeyPressedTime + 2000) {
+                activity.finish();
+                toast.cancel();
+            }
+        }
+
+        private void showGuide_Default() {
+            toast = Toast.makeText(activity, "뒤로 버튼을 한번 더 누르시면 종료됩니다.", Toast.LENGTH_SHORT);
+            toast.show();
+        }
+    }
+
     // 생명주기 ====================================================================================
+    @Override
+    protected void onStop() {
+        super.onStop();
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();

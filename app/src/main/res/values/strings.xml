@@ -3,17 +3,12 @@
     <string name="title_activity_settings">Settings</string>
 
     <!-- Preference Titles -->
-    <string name="messages_header">Messages</string>
-    <string name="sync_header">Sync</string>
+    <string name="dev_header">Developer Info</string>
 
-    <!-- Messages Preferences -->
-    <string name="signature_title">Your signature</string>
-    <string name="reply_title">Default reply action</string>
+    <!-- Developer Info Preferences -->
+    <string name="dev_e_title">개발자 이메일</string>
+    <string name="dev_e_summary">steganowork@naver.com</string>
+    <string name="dev_v_title">버전 정보</string>
+    <string name="dev_v_summary">Version 1.0.0</string>
 
-    <!-- Sync Preferences -->
-    <string name="sync_title">Sync email periodically</string>
-    <string name="attachment_title">Download incoming attachments</string>
-    <string name="attachment_summary_on">Automatically download attachments for incoming emails
-    </string>
-    <string name="attachment_summary_off">Only download attachments when manually requested</string>
 </resources>
