@@ -482,6 +482,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // 모스부호 데이터 =============================================================================
+    // 테스트 사이트 : https://jinh.kr/morse/
     static private void InputMorseCode() {
         // 모스 부호 -> 한국어
         MorseKorean.put("*-**", "ㄱ");
