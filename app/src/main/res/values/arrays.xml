@@ -14,5 +14,6 @@
         <item>"언어 -> 모스부호"</item>
         <item>"모스부호 -> 영어"</item>
         <item>"모스부호 -> 한국어"</item>
+        <item>"모스부호 -> 숫자"</item>
     </string-array>
 </resources>
