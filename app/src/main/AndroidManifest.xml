@@ -3,6 +3,11 @@
     package="com.steganowork.morsecode">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.FLASHLIGHT" />
+    <uses-feature android:name="android.hardware.camera" />
+    <uses-feature android:name="android.hardware.camera.flash" />
 
     <application
         android:allowBackup="true"
@@ -16,8 +21,10 @@
             android:label="@string/title_activity_settings"
             android:screenOrientation="portrait"></activity>
         <activity android:name=".InfoActivity"
-            android:screenOrientation="portrait"/>
+            android:label=""
+            android:screenOrientation="portrait" />
         <activity android:name=".MainActivity"
+            android:windowSoftInputMode="adjustNothing"
             android:label=""
             android:screenOrientation="portrait">
             <intent-filter>

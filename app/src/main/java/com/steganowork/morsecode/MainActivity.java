@@ -1,15 +1,22 @@
 package com.steganowork.morsecode;
 
+import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
-import android.net.Uri;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.transition.Fade;
+import android.transition.Slide;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -20,20 +27,25 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.jaredrummler.materialspinner.MaterialSpinner;
 
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 public class MainActivity extends AppCompatActivity {
     String TAG = "MainActivity";
     private BackPressCloseHandler backPressCloseHandler; // back key 객체 선언
 
-    private static HashMap<String, String> MorseKorean;
-    private static HashMap<String, String> MorseEnglish;
-    private static HashMap<String, String> MorseNumber;
-    private static HashMap<String, String> MorseSpecial;
+    private static TreeMap<String, String> MorseKorean;
+    private static TreeMap<String, String> MorseEnglish;
+    private static TreeMap<String, String> MorseNumber;
+    private static TreeMap<String, String> MorseSpecial;
     TextView resultText;
     EditText editText;
 
+    boolean lightEnable = false;
+    boolean vibeEnable = false;
+
+    String noResultData;
     String languageState = "";
     String[] languageAvailable;
 
@@ -43,25 +55,34 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        setupWindowAnimations();  // 트랜지션 함수
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);   // 화면꺼짐 방지
         backPressCloseHandler = new BackPressCloseHandler(this);      // 뒤로가기 버튼
 
         // 필요한 변수 선언
+        noResultData = getResources().getString(R.string.no_result_data);
         resultText = (TextView) findViewById(R.id.textView7);
+        resultText.setText(noResultData);  // 초기화
         editText = (EditText) findViewById(R.id.editText);
 
-        MorseKorean = new HashMap<String, String>();
-        MorseEnglish = new HashMap<String, String>();
-        MorseNumber = new HashMap<String, String>();
-        MorseSpecial = new HashMap<String, String>();
+        MorseEnglish = new TreeMap<String, String>();
+        MorseKorean = new TreeMap<String, String>();
+        MorseNumber = new TreeMap<String, String>();
+        MorseSpecial = new TreeMap<String, String>();
 
-        InputMorseCode();  // 해시 코드값 넣기 (모스 데이터 삽입)
+        MorseCodeBook morseCodeBook = new MorseCodeBook();
+        MorseEnglish = morseCodeBook.getMorseEnglish();  // 해시 코드값 넣기 (모스 데이터 삽입)
+        MorseKorean = morseCodeBook.getMorseKorean();
+        MorseNumber = morseCodeBook.getMorseNumber();
+        MorseSpecial = morseCodeBook.getMorseSpecial();
+
         languageAvailable = getResources().getStringArray(R.array.TranslationLanguage);  // 가능한 언어
 
         MaterialSpinner spinner = (MaterialSpinner) findViewById(R.id.spinner);  // 스피너
         spinner.setItems(getResources().getStringArray(R.array.TranslationLanguage));
         spinner.setOnItemSelectedListener(new MaterialSpinner.OnItemSelectedListener<String>() {
-            @Override public void onItemSelected(MaterialSpinner view, int position, long id, String item) {
+            @Override
+            public void onItemSelected(MaterialSpinner view, int position, long id, String item) {
                 ChangeMode(item);  // 모드 변경
             }
         });
@@ -87,6 +108,86 @@ public class MainActivity extends AppCompatActivity {
                 // 입력이 끝났을 때
             }
         });
+
+        // 피드백 (빛, 진동) =======================================================================
+        resultText.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String morseString = resultText.getText().toString();  // 현재 결과 가져옴
+                int vibAmp = 150;
+                int vibLongTime = 500;
+                int vibShortTime = 250;
+                int vibTermTime = 250;
+
+                if (vibeEnable) {  // 진동 보내기
+                    //Log.i(TAG, "진동 On, morseString : " + morseString);
+                    MosVib mosVib = new MosVib(getApplicationContext());  // 진동을 사용할 수 있는 객체를 생성
+                    long[] customTimings_vib = new long[resultText.length() * 2];
+                    int[] customAmplitudes_vib = new int[resultText.length() * 2];
+                    int tempCount = 0;
+
+                    for (char temp : morseString.toCharArray()) {  // 모스 부호 분석해서 타이밍 맞추기
+                        //Log.i(TAG, "temp : " + temp);
+                        if (temp == '-') {
+                            //Log.i(TAG, "- 추가");
+                            customTimings_vib[tempCount] = vibLongTime;
+                            customAmplitudes_vib[tempCount] = vibAmp;  // 진동 범위 : 0~255
+                        } else if (temp == '*') {
+                            //Log.i(TAG, "* 추가");
+                            customTimings_vib[tempCount] = vibShortTime;
+                            customAmplitudes_vib[tempCount] = vibAmp;
+                        } else {
+                            //Log.i(TAG, "쉼표 추가");
+                            customTimings_vib[tempCount] = vibShortTime;
+                            customAmplitudes_vib[tempCount] = 0;
+                        }
+                        customTimings_vib[tempCount + 1] = vibTermTime;  // 파형으로 들어가야하므로 주기적으로 넣어줌
+                        customAmplitudes_vib[tempCount + 1] = 0;
+                        tempCount += 2;
+                    }
+                    //Log.i(TAG, "진동 피드백 On");
+                    mosVib.VidStart(customTimings_vib, customAmplitudes_vib);  // 진동 시작
+                    //Log.i(TAG, "진동 Off");
+                }
+
+                if (lightEnable) {  // 빛 보내기
+                    //Log.i(TAG, "플래시 On, morseString : " + morseString);
+                    MosLight mosLight = new MosLight(getApplicationContext());  // 빛을 사용할 수 있는 객체를 생성
+                    long[] customTimings_light = new long[resultText.length()];
+                    int[] customOnOff_light = new int[resultText.length()];  // 1 = on, 0 = off
+                    int tempCount = 0;
+
+                    for (char temp : morseString.toCharArray()) {  // 모스 부호 분석해서 타이밍 맞추기
+                        //Log.i(TAG, "temp : " + temp);
+                        if (temp == '-') {
+                            customTimings_light[tempCount] = vibLongTime;
+                            customOnOff_light[tempCount] = 1;
+                        } else if (temp == '*') {
+                            customTimings_light[tempCount] = vibShortTime;
+                            customOnOff_light[tempCount] = 1;
+                        } else {
+                            customTimings_light[tempCount] = vibShortTime;
+                            customOnOff_light[tempCount] = 0;
+                        }
+                        tempCount += 1;
+                    }
+                    //Log.i(TAG, "플래시 피드백 On");
+                    mosLight.LightStart(customTimings_light, customOnOff_light, vibTermTime);  // 플래시 시작
+                    //Log.i(TAG, "플래시 Off");
+                }
+            }
+        });
+    }
+
+    private void setupWindowAnimations() {  // 트랜지션 함수
+        //Slide slide = new Slide();
+        Fade fade = new Fade();
+        fade.setDuration(1000);
+        getWindow().setExitTransition(fade);
+
+        Slide slide = new Slide();
+        slide.setDuration(1000);
+        getWindow().setReenterTransition(slide);
     }
 
     // 결과 업데이트 함수
@@ -109,16 +210,46 @@ public class MainActivity extends AppCompatActivity {
         Intent intent;
 
         switch (item.getItemId()) {
+            case R.id.light:
+                // 카메라 권한 확인 (빛 이용을 위해)
+                String permission[] = {Manifest.permission.CAMERA};
+                boolean lightGranted;
+                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.M) {  // 21 버전 이하는 카메라 권한이 필요함 (카메라 1 API 사용)
+                    lightGranted = (checkSelfPermission(permission[0]) == PackageManager.PERMISSION_GRANTED);
+                } else {  // 그 이상은 카메라 권한이 필요없음 (카메라 2 API 사용)
+                    lightGranted = true;
+                }
+
+                if (lightGranted) {  // 카메라 권한이 있을 경우
+                    if (lightEnable) {
+                        item.setIcon(R.drawable.ic_light_off);
+                        lightEnable = false;
+                    } else {
+                        item.setIcon(R.drawable.ic_light_on);
+                        lightEnable = true;
+                    }
+                } else {  // 권한이 없을 경우
+                    item.setIcon(R.drawable.ic_light_off);
+                    lightEnable = false;
+                    requestPermissions(permission, 1);
+                }
+                break;
+            case R.id.vib:
+                if (vibeEnable) {
+                    item.setIcon(R.drawable.ic_vibe_off);
+                    vibeEnable = false;
+                } else {
+                    item.setIcon(R.drawable.ic_vibe_on);
+                    vibeEnable = true;
+                }
+                break;
             case R.id.new_info:
-                String url = "https://ko.wikipedia.org/wiki/%EB%AA%A8%EC%8A%A4_%EB%B6%80%ED%98%B8";
-                intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                intent = new Intent(this, InfoActivity.class);
                 startActivity(intent);
                 break;
             case R.id.Settings:
                 intent = new Intent(this, SettingsActivity.class);
                 startActivity(intent);
-                break;
-            default:
                 break;
         }
 
@@ -151,8 +282,8 @@ public class MainActivity extends AppCompatActivity {
         String[] character = str.split("");  // 단어 단위로 분해
 
         if (str.equals("")) {
-            Log.i(TAG, "EncodingDataToMorse : 데이터 없어서 '-' 반환");
-            encode.append("-");
+            Log.i(TAG, "EncodingDataToMorse : 데이터 없음");
+            encode.append(noResultData);
             return encode;
         }
 
@@ -168,16 +299,16 @@ public class MainActivity extends AppCompatActivity {
 
             if (numberPattern) {  // 숫자 -> 모스부호 ----------------------------------------------
                 for (String key : MorseNumber.keySet()) {
-                    if (character[i].equals(MorseNumber.get(key))) {
-                        encode.append(key).append(" ");
+                    if (character[i].equals(key)) {
+                        encode.append(MorseNumber.get(key)).append(" ");
                         Log.i(TAG, "number encode : " + encode);
                         break;
                     }
                 }
             } else if (specialCharacterPattern) {  // 특수문자 -> 모스부호 -------------------------
                 for (String key : MorseSpecial.keySet()) {
-                    if (character[i].equals(MorseSpecial.get(key))) {
-                        encode.append(key).append(" ");
+                    if (character[i].equals(key)) {
+                        encode.append(MorseSpecial.get(key)).append(" ");
                         Log.i(TAG, "specialChar encode : " + encode);
                         break;
                     }
@@ -185,8 +316,8 @@ public class MainActivity extends AppCompatActivity {
             } else if (englishPattern) {  // 영어 -> 모스부호 --------------------------------------
                 String engChar = character[i].toUpperCase();
                 for (String key : MorseEnglish.keySet()) {
-                    if (engChar.equals(MorseEnglish.get(key))) {
-                        encode.append(key).append(" ");
+                    if (engChar.equals(key)) {
+                        encode.append(MorseEnglish.get(key)).append(" ");
                         Log.i(TAG, "english encode : " + encode);
                         break;
                     }
@@ -204,8 +335,8 @@ public class MainActivity extends AppCompatActivity {
 
                 if (koreanInitConsPattern) {  // 초성 범위일 경우는 실행 (한글 범위를 말함) (미완성 한글일 때 : ㄱㄴㄷ)
                     for (String key : MorseKorean.keySet()) {
-                        if (character[i].equals(MorseKorean.get(key))) {
-                            encode.append(key).append(" ");
+                        if (character[i].equals(key)) {
+                            encode.append(MorseKorean.get(key)).append(" ");
                             Log.i(TAG, "korean encode : " + encode);
                             break;
                         }
@@ -213,8 +344,8 @@ public class MainActivity extends AppCompatActivity {
                 } else if (initialConsonantInt >= 0 && initialConsonantInt <= 18) {  // 초성 범위일 경우는 실행 (완성된 한글일 때 : 가나다)
                     String init = "" + Consonant(1, initialConsonantInt);
                     for (String key : MorseKorean.keySet()) {
-                        if (init.equals(MorseKorean.get(key))) {
-                            encode.append(key).append(" ");
+                        if (init.equals(key)) {
+                            encode.append(MorseKorean.get(key)).append(" ");
                             Log.i(TAG, "korean encode : " + encode);
                             break;
                         }
@@ -227,8 +358,8 @@ public class MainActivity extends AppCompatActivity {
                 if (neuterConsonantInt >= 0 && neuterConsonantInt <= 20) {  // 중성 범위일 경우는 실행
                     String neu = "" + Consonant(2, neuterConsonantInt);
                     for (String key : MorseKorean.keySet()) {
-                        if (neu.equals(MorseKorean.get(key))) {
-                            encode.append(key).append(" ");
+                        if (neu.equals(key)) {
+                            encode.append(MorseKorean.get(key)).append(" ");
                             Log.i(TAG, "korean encode : " + encode);
                             break;
                         }
@@ -237,8 +368,8 @@ public class MainActivity extends AppCompatActivity {
                 if (finalConsonantInt >= 0 && finalConsonantInt <= 27) {  // 종성 범위일 경우는 실행
                     String fin = Consonant(3, finalConsonantInt);
                     for (String key : MorseKorean.keySet()) {
-                        if (fin != null && fin.equals(MorseKorean.get(key))) {
-                            encode.append(key).append(" ");
+                        if (fin != null && fin.equals(key)) {
+                            encode.append(MorseKorean.get(key)).append(" ");
                             Log.i(TAG, "korean encode : " + encode);
                             break;
                         }
@@ -273,7 +404,7 @@ public class MainActivity extends AppCompatActivity {
 
             if (txt[i].equals(" ")) {  // 띄어쓰기일 경우 띄어줌
                 morsePattern = true;  // 띄어쓰기는 검사가 안되서 직접 바꿔줌
-            } else if(!morsePattern){  // 모스부호 패턴이 아니면 break
+            } else if (!morsePattern) {  // 모스부호 패턴이 아니면 break
                 break;
             }
         }
@@ -285,7 +416,7 @@ public class MainActivity extends AppCompatActivity {
             return decode;
         } else if (assembleString.equals("")) {
             Log.i(TAG, "assembleString : 데이터 없어서 '-' 반환");
-            decode.append("-");
+            decode.append(noResultData);
             return decode;
         }
 
@@ -294,24 +425,30 @@ public class MainActivity extends AppCompatActivity {
 
             for (int i = 0; i < getSlice.length; i++) {
                 Log.i(TAG, "getSlice.length : " + getSlice.length + ", getSlice[" + i + "] : " + getSlice[i]);
-                if(getSlice[i].equals("")){  // 띄어쓰기는 지워지고 배열이 증가하여 다시 띄어쓰기를 넣어줌
+                if (getSlice[i].equals("")) {  // 띄어쓰기는 지워지고 배열이 증가하여 다시 띄어쓰기를 넣어줌
                     getSlice[i] = " ";
                 }
-
-                String EngValue = MorseEnglish.get(getSlice[i]);
-                String KorValue = MorseKorean.get(getSlice[i]);
-                String NumValue = MorseNumber.get(getSlice[i]);
-                String SpeValue = MorseSpecial.get(getSlice[i]);
-                Log.i(TAG, "EngValue : " + EngValue + ", KorValue : " + KorValue + ", SpeValue : " + SpeValue + ", NumValue : " + NumValue);
+                String KorValue = "";
 
                 if (languageState.equals(languageAvailable[1])) {  // 모스부호 -> 영어 ===========================
                     Log.i(TAG, "languageState : 영어");
-                    if (EngValue != null && EngValue.equals(MorseEnglish.get(getSlice[i]))) {  // 영어일 경우
-                        Log.i(TAG, "EngValue : " + EngValue);
-                        decode.append(EngValue);
-                    } else if (SpeValue != null && SpeValue.equals(MorseSpecial.get(getSlice[i]))) {  // 특수문자일 경우
-                        Log.i(TAG, "SpeValue : " + SpeValue);
-                        decode.append(SpeValue);
+                    if (MorseEnglish.containsValue(getSlice[i])) {  // 영어일 경우 (영어에 값이 있을 경우, 키 말고 값임)
+                        for (String key : MorseEnglish.keySet()) {
+                            //Log.i(TAG, "key : " + key + ", MorseEnglish : " + MorseEnglish.get(key));
+                            if (getSlice[i].equals(MorseEnglish.get(key))) {
+                                Log.i(TAG, "MorseEnglish : " + key);
+                                decode.append(key);
+                                break;
+                            }
+                        }
+                    } else if (MorseSpecial.containsValue(getSlice[i])) {  // 특수문자일 경우
+                        for (String key : MorseSpecial.keySet()) {
+                            if (getSlice[i].equals(MorseSpecial.get(key))) {
+                                Log.i(TAG, "MorseSpecial : " + key);
+                                decode.append(key);
+                                break;
+                            }
+                        }
                     } else {  // * 또는 - 문자이지만 데이터에 없는 경우
                         decode.delete(0, decode.length());
                         decode.append("Not supported or not found in the data.");
@@ -319,24 +456,36 @@ public class MainActivity extends AppCompatActivity {
                     }
                 } else if (languageState.equals(languageAvailable[2])) {  // 모스부호 -> 한국어 ================
                     Log.i(TAG, "languageState : 한국어");
-                    if (KorValue != null && KorValue.equals(MorseKorean.get(getSlice[i]))) {  // 한국어일 경우
-                        String getKorValueCom;
+                    if (MorseKorean.containsValue(getSlice[i])) {  // 한국어일 경우
+                        for (String key : MorseKorean.keySet()) {
+                            if (getSlice[i].equals(MorseKorean.get(key))) {
+                                Log.i(TAG, "MorseKorean : " + key);
+                                KorValue = key;
+                                break;
+                            }
+                        }
 
                         // 초성+초성 (ㄱ + ㄱ => ㄲ), 중성+중성 (ㅑ + ㅣ => ㅒ), 종성+종성 (ㄱ + ㅅ => ㄳ) 조합
                         if ((i + 1) < getSlice.length) {  // 글자 조합을 위해서 하나 더 가져와서 조합 가능한지 확인함
-                            getKorValueCom = MorseKorean.get((getSlice[i] + " " + getSlice[i + 1]));  // 두 성조를 조합해봄
-                            if (getKorValueCom != null && getKorValueCom.equals(MorseKorean.get(getSlice[i] + " " + getSlice[i + 1]))) {
-                                // 조합한 글자가 매칭되면
-                                Log.i(TAG, "getKorValueCom : " + getKorValueCom);
-                                KorValue = getKorValueCom;  // 2개를 합쳐서 읽고 값을 저장함, 2개를 읽었으니 +1 카운트함
-                                i++;
+                            for (String key : MorseKorean.keySet()) {
+                                if ((getSlice[i] + " " + getSlice[i + 1]).equals(MorseKorean.get(key))) {  // 조합한 글자가 매칭되면
+                                    Log.i(TAG, "MorseKorean : " + key);
+                                    KorValue = key;
+                                    i++;  // 2개를 합쳐서 읽고 값을 저장함, 2개를 읽었으니 +1 카운트함
+                                    break;
+                                }
                             }
                         }
                         Log.i(TAG, "KorValue(현재 값) : " + KorValue);
                         checkKorStr += KorValue;  // 현재 값도 저장함
-                    } else if (SpeValue != null && SpeValue.equals(MorseSpecial.get(getSlice[i]))) {  // 특수문자일 경우
-                        Log.i(TAG, "SpeValue : " + SpeValue);
-                        checkKorStr += SpeValue;
+                    } else if (MorseSpecial.containsValue(getSlice[i])) {  // 특수문자일 경우
+                        for (String key : MorseSpecial.keySet()) {
+                            if (getSlice[i].equals(MorseSpecial.get(key))) {
+                                Log.i(TAG, "MorseSpecial : " + key);
+                                checkKorStr += key;
+                                break;
+                            }
+                        }
                     } else {  // * 또는 - 문자이지만 데이터에 없는 경우
                         decode.delete(0, decode.length());
                         decode.append("Not supported or not found in the data.");
@@ -351,12 +500,22 @@ public class MainActivity extends AppCompatActivity {
                     }
                 } else if (languageState.equals(languageAvailable[3])) {  // 모스부호 -> 숫자 ================
                     Log.i(TAG, "languageState : 숫자");
-                    if (NumValue != null && NumValue.equals(MorseNumber.get(getSlice[i]))) {  // 숫자일 경우
-                        Log.i(TAG, "NumValue : " + NumValue);
-                        decode.append(NumValue);
-                    } else if (SpeValue != null && SpeValue.equals(MorseSpecial.get(getSlice[i]))) {  // 특수문자일 경우
-                        Log.i(TAG, "SpeValue : " + SpeValue);
-                        decode.append(SpeValue);
+                    if (MorseNumber.containsValue(getSlice[i])) {  // 숫자일 경우
+                        for (String key : MorseNumber.keySet()) {
+                            if (getSlice[i].equals(MorseNumber.get(key))) {
+                                Log.i(TAG, "MorseNumber : " + key);
+                                decode.append(key);
+                                break;
+                            }
+                        }
+                    } else if (MorseSpecial.containsValue(getSlice[i])) {  // 특수문자일 경우
+                        for (String key : MorseSpecial.keySet()) {
+                            if (getSlice[i].equals(MorseSpecial.get(key))) {
+                                Log.i(TAG, "MorseSpecial : " + key);
+                                decode.append(key);
+                                break;
+                            }
+                        }
                     } else {  // * 또는 - 문자이지만 데이터에 없는 경우
                         decode.delete(0, decode.length());
                         decode.append("Not supported or not found in the data.");
@@ -479,121 +638,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return 100;  // 배열에 없는 경우 없는 인덱스 번호를 넘겨줌
-    }
-
-    // 모스부호 데이터 =============================================================================
-    // 테스트 사이트 : https://jinh.kr/morse/
-    static private void InputMorseCode() {
-        // 모스 부호 -> 한국어
-        MorseKorean.put("*-**", "ㄱ");
-        MorseKorean.put("*-** *-**", "ㄲ");
-        MorseKorean.put("*-** --*", "ㄳ");
-        MorseKorean.put("**-*", "ㄴ");
-        MorseKorean.put("**-* *--*", "ㄵ");
-        MorseKorean.put("**-* *---", "ㄶ");
-        MorseKorean.put("-***", "ㄷ");
-        MorseKorean.put("-*** -***", "ㄸ");
-        MorseKorean.put("***-", "ㄹ");
-        MorseKorean.put("***- *-**", "ㄺ");
-        MorseKorean.put("***- --", "ㄻ");
-        MorseKorean.put("***- *--", "ㄼ");
-        MorseKorean.put("***- --*", "ㄽ");
-        MorseKorean.put("***- --**", "ㄾ");
-        MorseKorean.put("***- ---", "ㄿ");
-        MorseKorean.put("***- *---", "ㅀ");
-        MorseKorean.put("--", "ㅁ");
-        MorseKorean.put("*--", "ㅂ");
-        MorseKorean.put("*-- *--", "ㅃ");
-        MorseKorean.put("*-- --*", "ㅄ");
-        MorseKorean.put("--*", "ㅅ");
-        MorseKorean.put("--* --*", "ㅆ");
-        MorseKorean.put("-*-", "ㅇ");
-        MorseKorean.put("*--*", "ㅈ");
-        MorseKorean.put("*--* *--*", "ㅉ");
-        MorseKorean.put("-*-*", "ㅊ");
-        MorseKorean.put("-**-", "ㅋ");
-        MorseKorean.put("--**", "ㅌ");
-        MorseKorean.put("---", "ㅍ");
-        MorseKorean.put("*---", "ㅎ");
-        MorseKorean.put("*", "ㅏ");
-        MorseKorean.put("**", "ㅑ");
-        MorseKorean.put("-", "ㅓ");
-        MorseKorean.put("***", "ㅕ");
-        MorseKorean.put("*-", "ㅗ");
-        MorseKorean.put("-*", "ㅛ");
-        MorseKorean.put("****", "ㅜ");
-        MorseKorean.put("*-*", "ㅠ");
-        MorseKorean.put("-**", "ㅡ");
-        MorseKorean.put("**-", "ㅣ");
-        MorseKorean.put("-*--", "ㅔ");
-        MorseKorean.put("--*-", "ㅐ");
-        MorseKorean.put("*- *", "ㅘ");
-        MorseKorean.put("*- --*-", "ㅙ");
-        MorseKorean.put("*- **-", "ㅚ");
-        MorseKorean.put("*** **-", "ㅖ");
-        MorseKorean.put("****-", "ㅒ");
-        MorseKorean.put("**** -", "ㅝ");
-        MorseKorean.put("**** -*--", "ㅞ");
-        MorseKorean.put("**** **-", "ㅟ");
-        MorseKorean.put("-** **-", "ㅢ");
-
-        // 모스 부호 -> 영어
-        MorseEnglish.put("*-", "A");
-        MorseEnglish.put("-***", "B");
-        MorseEnglish.put("-*-*", "C");
-        MorseEnglish.put("-**", "D");
-        MorseEnglish.put("*", "E");
-        MorseEnglish.put("**-*", "F");
-        MorseEnglish.put("--*", "G");
-        MorseEnglish.put("****", "H");
-        MorseEnglish.put("**", "I");
-        MorseEnglish.put("*---", "J");
-        MorseEnglish.put("-*-", "K");
-        MorseEnglish.put("*-**", "L");
-        MorseEnglish.put("--", "M");
-        MorseEnglish.put("-*", "N");
-        MorseEnglish.put("---", "O");
-        MorseEnglish.put("*--*", "P");
-        MorseEnglish.put("--*-", "Q");
-        MorseEnglish.put("*-*", "R");
-        MorseEnglish.put("***", "S");
-        MorseEnglish.put("-", "T");
-        MorseEnglish.put("**-", "U");
-        MorseEnglish.put("***-", "V");
-        MorseEnglish.put("*--", "W");
-        MorseEnglish.put("-**-", "X");
-        MorseEnglish.put("-*--", "Y");
-        MorseEnglish.put("--**", "Z");
-
-        // 모스 부호 -> 숫자
-        MorseNumber.put("*----", "1");
-        MorseNumber.put("**---", "2");
-        MorseNumber.put("***--", "3");
-        MorseNumber.put("****-", "4");
-        MorseNumber.put("*****", "5");
-        MorseNumber.put("-****", "6");
-        MorseNumber.put("--***", "7");
-        MorseNumber.put("---**", "8");
-        MorseNumber.put("----*", "9");
-        MorseNumber.put("-----", "0");
-
-        // 모스 부호 -> 특수문자
-        MorseSpecial.put("*-*-*-", ".");
-        MorseSpecial.put("--**--", ",");
-        MorseSpecial.put("**--**", "?");
-        MorseSpecial.put("-**-*", "/");
-        MorseSpecial.put("-****-", "-");
-        MorseSpecial.put("-***-", "=");
-        MorseSpecial.put("---***", ":");
-        MorseSpecial.put("-*-*-*", ";");
-        MorseSpecial.put("-*--*", "(");
-        MorseSpecial.put("-*--*-", ")");
-        MorseSpecial.put("*----*", "'");
-        MorseSpecial.put("*-**-*", "\"");
-        MorseSpecial.put("*-***", "!");
-        MorseSpecial.put("*--*-*", "@");
-        MorseSpecial.put("*-*-*", "+");
-        MorseSpecial.put(" ", " ");
     }
 
     // 스레드 클래스 처리 ==========================================================================

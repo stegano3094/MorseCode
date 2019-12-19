@@ -1,7 +1,8 @@
 package com.steganowork.morsecode;
 
-import android.content.Intent;
 import android.os.Bundle;
+import android.transition.Fade;
+import android.transition.Slide;
 import android.view.Menu;
 import android.view.MenuItem;
 
@@ -24,6 +25,8 @@ public class SettingsActivity extends AppCompatActivity {
         if (actionBar != null) {
             actionBar.setDisplayHomeAsUpEnabled(true);
         }
+
+        setupWindowAnimations();  // 트랜지션 함수
     }
 
     public static class SettingsFragment extends PreferenceFragmentCompat {
@@ -33,6 +36,16 @@ public class SettingsActivity extends AppCompatActivity {
         }
     }
 
+    private void setupWindowAnimations() {  // 트랜지션 함수
+        //Slide slide = new Slide();
+        Fade fade = new Fade();
+        fade.setDuration(1000);
+        getWindow().setExitTransition(fade);
+
+        Slide slide = new Slide();
+        slide.setDuration(1000);
+        getWindow().setReenterTransition(slide);
+    }
 
     // 액션 바 =====================================================================================
     @Override

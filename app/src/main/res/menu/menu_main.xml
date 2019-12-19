@@ -3,6 +3,19 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/light"
+        android:icon="@drawable/ic_light_off"
+        android:title="light"
+        app:showAsAction="always" >
+    </item>
+    <item
+        android:id="@+id/vib"
+        android:icon="@drawable/ic_vibe_off"
+        android:title="vib"
+        app:showAsAction="always" >
+    </item>
+
+    <item
         android:id="@+id/more"
         android:icon="@drawable/ic_more"
         android:title="more"
