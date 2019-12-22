@@ -149,7 +149,7 @@ public class MainActivity extends AppCompatActivity {
                         feedbackThread_light.setSpeed(speed);
                         feedbackThread_light.start();
                     }
-                    if (soundEnable) {
+                    if (soundEnable) {  // 소리 보내기
                         runNum = 3;
                         int soundTrackNum = 1;  // tkdnse1~2
                         feedbackThread_sound = new FeedbackThread(runNum, soundTrackNum);
