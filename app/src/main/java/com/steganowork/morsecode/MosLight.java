@@ -1,26 +1,34 @@
 package com.steganowork.morsecode;
 
-import android.app.AlertDialog;
 import android.content.Context;
-import android.content.DialogInterface;
-import android.content.pm.PackageManager;
+import android.hardware.Camera;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
+import android.os.Build;
 import android.util.Log;
 
 public class MosLight {
     private String TAG = "MosLight";
     private String cameraId;
     private CameraManager manager;
-    private boolean isFlashAvailable;
+    private int cameraVersion;
+    private Context context;
+    private Camera camera;
 
-    MosLight(Context context) {
-        // 플래시 기능 확인
-        isFlashAvailable = context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH);
-        Log.i(TAG, "isFlashAvailable : " + isFlashAvailable);
+    MosLight(Context context, int cameraVersion) {
+        this.context = context;
+        this.cameraVersion = cameraVersion;
+        Log.i(TAG, "cameraVersion : " + cameraVersion);
 
-        if (isFlashAvailable) {  // 플래시 기능이 있으면 카메라 매니저 확인
+        if (cameraVersion == 1) {  // 하위버전에서 카메라1 api 사용
+            try {
+                camera = Camera.open();
+                Log.i(TAG, "Can Use Camera");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else if (cameraVersion == 2) {  // 상위 버전에서 카메라2 api 사용
             manager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
             cameraId = getBackFacingCameraId(manager);
             Log.i(TAG, "Can Use Camera");
@@ -40,10 +48,37 @@ public class MosLight {
         return null;
     }
 
-    public void LightStart(long[] customTimings, int[] customOnOff, int vibTermTime) {
+    public void LightStart(long[] customTimings, int[] customOnOff, int TermTime) {
         try {
-            if(isFlashAvailable) {  // 플래시 기능이 있을 때 접근시 실행
-                Log.i(TAG, "Light On");
+            //Log.i(TAG, "Light On");
+            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.M) {  // 하위버전에서 카메라1 api 사용
+                Camera.Parameters parameters = camera.getParameters();
+                try {
+                    int count = 0;
+                    for (long i : customTimings) {
+                        if (customOnOff[count] == 1) {
+                            parameters.setFlashMode(parameters.FLASH_MODE_TORCH);
+                            camera.setParameters(parameters);
+                            camera.startPreview();
+                            Thread.sleep(i);
+                        } else if (customOnOff[count] == 0) {
+                            parameters.setFlashMode(parameters.FLASH_MODE_OFF);
+                            camera.setParameters(parameters);
+                            camera.startPreview();
+                            Thread.sleep(i);
+                        }
+                        parameters.setFlashMode(parameters.FLASH_MODE_OFF);
+                        camera.setParameters(parameters);
+                        camera.startPreview();
+                        Thread.sleep(TermTime);
+                        count++;
+                    }
+                    camera.stopPreview();  // 카메라 사용 끔
+                    camera.release();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            } else {
                 cameraId = getBackFacingCameraId(manager);
                 try {
                     int count = 0;
@@ -56,15 +91,12 @@ public class MosLight {
                             Thread.sleep(i);
                         }
                         manager.setTorchMode(cameraId, false);
-                        Thread.sleep(vibTermTime);
+                        Thread.sleep(TermTime);
                         count++;
                     }
-                    manager.setTorchMode(cameraId, false);  // 플래시 끄는걸로 마무리
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-            } else {  // 플래시 기능이 없을 때 접근시 실행
-                Log.i(TAG, "Light 기능 없음");
             }
         } catch (CameraAccessException e) {
             e.printStackTrace();

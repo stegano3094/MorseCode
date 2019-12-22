@@ -2,8 +2,6 @@ package com.steganowork.morsecode;
 
 import android.Manifest;
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -19,6 +17,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.EditText;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -27,7 +26,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.jaredrummler.materialspinner.MaterialSpinner;
 
-import java.util.ArrayList;
+import org.adw.library.widgets.discreteseekbar.DiscreteSeekBar;
+
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
@@ -42,12 +42,22 @@ public class MainActivity extends AppCompatActivity {
     TextView resultText;
     EditText editText;
 
+    FeedbackThread feedbackThread_vid = null;
+    FeedbackThread feedbackThread_light = null;
+    FeedbackThread feedbackThread_sound = null;
+
     boolean lightEnable = false;
     boolean vibeEnable = false;
+    boolean soundEnable = false;
+    boolean isVibStarted = false;
+    boolean isLightStarted = false;
+    boolean isSoundStarted = false;
 
     String noResultData;
     String languageState = "";
     String[] languageAvailable;
+    int cameraVersion;
+    int speed = 5;
 
     private UpdateThread mUpdateThread;
 
@@ -76,8 +86,9 @@ public class MainActivity extends AppCompatActivity {
         MorseNumber = morseCodeBook.getMorseNumber();
         MorseSpecial = morseCodeBook.getMorseSpecial();
 
-        languageAvailable = getResources().getStringArray(R.array.TranslationLanguage);  // 가능한 언어
 
+        // 모드 변경 -------------------------------------------------------------------------------
+        languageAvailable = getResources().getStringArray(R.array.TranslationLanguage);  // 가능한 언어
         MaterialSpinner spinner = (MaterialSpinner) findViewById(R.id.spinner);  // 스피너
         spinner.setItems(getResources().getStringArray(R.array.TranslationLanguage));
         spinner.setOnItemSelectedListener(new MaterialSpinner.OnItemSelectedListener<String>() {
@@ -109,77 +120,183 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // 피드백 (빛, 진동) =======================================================================
+        // 속도 조절 -------------------------------------------------------------------------------
+        DiscreteSeekBar discreteSeekBar = (DiscreteSeekBar) findViewById(R.id.discreteSeekBar);
+        discreteSeekBar.setNumericTransformer(new DiscreteSeekBar.NumericTransformer() {
+            @Override
+            public int transform(int value) {
+                speed = value + 5;
+                return value;
+            }
+        });
+
+        // 피드백 (빛, 진동) -----------------------------------------------------------------------
         resultText.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String morseString = resultText.getText().toString();  // 현재 결과 가져옴
-                int vibAmp = 150;
-                int vibLongTime = 500;
-                int vibShortTime = 250;
-                int vibTermTime = 250;
+                int runNum;
 
-                if (vibeEnable) {  // 진동 보내기
-                    //Log.i(TAG, "진동 On, morseString : " + morseString);
-                    MosVib mosVib = new MosVib(getApplicationContext());  // 진동을 사용할 수 있는 객체를 생성
-                    long[] customTimings_vib = new long[resultText.length() * 2];
-                    int[] customAmplitudes_vib = new int[resultText.length() * 2];
-                    int tempCount = 0;
-
-                    for (char temp : morseString.toCharArray()) {  // 모스 부호 분석해서 타이밍 맞추기
-                        //Log.i(TAG, "temp : " + temp);
-                        if (temp == '-') {
-                            //Log.i(TAG, "- 추가");
-                            customTimings_vib[tempCount] = vibLongTime;
-                            customAmplitudes_vib[tempCount] = vibAmp;  // 진동 범위 : 0~255
-                        } else if (temp == '*') {
-                            //Log.i(TAG, "* 추가");
-                            customTimings_vib[tempCount] = vibShortTime;
-                            customAmplitudes_vib[tempCount] = vibAmp;
-                        } else {
-                            //Log.i(TAG, "쉼표 추가");
-                            customTimings_vib[tempCount] = vibShortTime;
-                            customAmplitudes_vib[tempCount] = 0;
-                        }
-                        customTimings_vib[tempCount + 1] = vibTermTime;  // 파형으로 들어가야하므로 주기적으로 넣어줌
-                        customAmplitudes_vib[tempCount + 1] = 0;
-                        tempCount += 2;
+                if(!isVibStarted && !isLightStarted && !isSoundStarted) {
+                    if (vibeEnable) {  // 진동 보내기
+                        runNum = 1;
+                        feedbackThread_vid = new FeedbackThread(runNum);
+                        feedbackThread_vid.setSpeed(speed);
+                        feedbackThread_vid.start();
                     }
-                    //Log.i(TAG, "진동 피드백 On");
-                    mosVib.VidStart(customTimings_vib, customAmplitudes_vib);  // 진동 시작
-                    //Log.i(TAG, "진동 Off");
-                }
-
-                if (lightEnable) {  // 빛 보내기
-                    //Log.i(TAG, "플래시 On, morseString : " + morseString);
-                    MosLight mosLight = new MosLight(getApplicationContext());  // 빛을 사용할 수 있는 객체를 생성
-                    long[] customTimings_light = new long[resultText.length()];
-                    int[] customOnOff_light = new int[resultText.length()];  // 1 = on, 0 = off
-                    int tempCount = 0;
-
-                    for (char temp : morseString.toCharArray()) {  // 모스 부호 분석해서 타이밍 맞추기
-                        //Log.i(TAG, "temp : " + temp);
-                        if (temp == '-') {
-                            customTimings_light[tempCount] = vibLongTime;
-                            customOnOff_light[tempCount] = 1;
-                        } else if (temp == '*') {
-                            customTimings_light[tempCount] = vibShortTime;
-                            customOnOff_light[tempCount] = 1;
-                        } else {
-                            customTimings_light[tempCount] = vibShortTime;
-                            customOnOff_light[tempCount] = 0;
-                        }
-                        tempCount += 1;
+                    if (lightEnable) {  // 빛 보내기
+                        runNum = 2;
+                        feedbackThread_light = new FeedbackThread(runNum);
+                        feedbackThread_light.setSpeed(speed);
+                        feedbackThread_light.start();
                     }
-                    //Log.i(TAG, "플래시 피드백 On");
-                    mosLight.LightStart(customTimings_light, customOnOff_light, vibTermTime);  // 플래시 시작
-                    //Log.i(TAG, "플래시 Off");
+                    if (soundEnable) {
+                        runNum = 3;
+                        int soundTrackNum = 1;  // tkdnse1~2
+                        feedbackThread_sound = new FeedbackThread(runNum, soundTrackNum);
+                        feedbackThread_sound.setSpeed(speed);
+                        feedbackThread_sound.start();
+                    }
                 }
             }
         });
     }
 
-    private void setupWindowAnimations() {  // 트랜지션 함수
+    // 동시 수행을 위한 스레드 =====================================================================
+    public class FeedbackThread extends Thread {
+        private static final String TAG = "FeedbackThread";
+        int Amp = 150;
+        int LongTime = 50;
+        int ShortTime = 25;
+        int TermTime = 25;
+        int runNum;
+        int soundTrackNum;
+        String morseString = resultText.getText().toString();  // 현재 결과 가져옴
+
+        public FeedbackThread(int runNUm) {
+            Log.i(TAG, "feedback Thread on");
+            this.runNum = runNUm;
+        }
+
+        public FeedbackThread(int runNUm, int soundTrackNum) {
+            Log.i(TAG, "feedback Thread on");
+            this.runNum = runNUm;
+            this.soundTrackNum = soundTrackNum;
+        }
+
+        public void run() {
+            try {
+                if (runNum == 1) {
+                    isVibStarted = true;  // 시작 플레그
+                    Log.i(TAG, "runNum == 1");
+                    vibeMode(morseString, Amp, LongTime, ShortTime, TermTime);
+                    isVibStarted = false;  // 종료 플레그
+                } else if (runNum == 2) {
+                    isLightStarted = true;
+                    Log.i(TAG, "runNum == 2");
+                    lightMode(morseString, LongTime, ShortTime, TermTime);
+                    isLightStarted = false;
+                } else if (runNum == 3) {
+                    isSoundStarted = true;
+                    Log.i(TAG, "runNum == 3");
+                    soundMode(morseString, LongTime, ShortTime, TermTime, soundTrackNum);
+                    isSoundStarted = false;
+                }
+            } catch (Exception e){
+                e.printStackTrace();
+            }
+        }
+
+        public void setSpeed(int speed) {
+            this.LongTime = LongTime * speed;
+            this.ShortTime = ShortTime * speed;
+            this.TermTime = TermTime * speed;
+        }
+    }
+
+    public void vibeMode(String morseString, int Amp, int LongTime, int ShortTime, int TermTime) {
+        //Log.i(TAG, "진동 On, morseString : " + morseString);
+        MosVib mosVib = new MosVib(getApplicationContext());  // 진동을 사용할 수 있는 객체를 생성
+        long[] customTimings_vib = new long[resultText.length() * 2];
+        int[] customAmplitudes_vib = new int[resultText.length() * 2];
+        int tempCount = 0;
+
+        for (char temp : morseString.toCharArray()) {  // 모스 부호 분석해서 타이밍 맞추기
+            //Log.i(TAG, "temp : " + temp);
+            if (temp == '-') {
+                //Log.i(TAG, "- 추가");
+                customTimings_vib[tempCount] = LongTime;
+                customAmplitudes_vib[tempCount] = Amp;  // 진동 범위 : 0~255
+            } else if (temp == '*') {
+                //Log.i(TAG, "* 추가");
+                customTimings_vib[tempCount] = ShortTime;
+                customAmplitudes_vib[tempCount] = Amp;
+            } else {
+                //Log.i(TAG, "쉼표 추가");
+                customTimings_vib[tempCount] = ShortTime;
+                customAmplitudes_vib[tempCount] = 0;
+            }
+            customTimings_vib[tempCount + 1] = TermTime;  // 파형으로 들어가야하므로 주기적으로 넣어줌
+            customAmplitudes_vib[tempCount + 1] = 0;
+            tempCount += 2;
+        }
+        //Log.i(TAG, "진동 피드백 On");
+        mosVib.VidStart(customTimings_vib, customAmplitudes_vib);  // 진동 시작
+        //Log.i(TAG, "진동 Off");
+    }
+
+    public void lightMode(String morseString, int LongTime, int ShortTime, int TermTime) {
+        //Log.i(TAG, "플래시 On, morseString : " + morseString);
+        MosLight mosLight = new MosLight(getApplicationContext(), cameraVersion);  // 빛을 사용할 수 있는 객체를 생성
+        long[] customTimings_light = new long[resultText.length()];
+        int[] customOnOff_light = new int[resultText.length()];  // 1 = on, 0 = off
+        int tempCount = 0;
+
+        for (char temp : morseString.toCharArray()) {  // 모스 부호 분석해서 타이밍 맞추기
+            //Log.i(TAG, "temp : " + temp);
+            if (temp == '-') {
+                customTimings_light[tempCount] = LongTime;
+                customOnOff_light[tempCount] = 1;
+            } else if (temp == '*') {
+                customTimings_light[tempCount] = ShortTime;
+                customOnOff_light[tempCount] = 1;
+            } else {
+                customTimings_light[tempCount] = ShortTime;
+                customOnOff_light[tempCount] = 0;
+            }
+            tempCount += 1;
+        }
+        //Log.i(TAG, "플래시 피드백 On");
+        mosLight.LightStart(customTimings_light, customOnOff_light, TermTime);  // 플래시 시작
+        //Log.i(TAG, "플래시 Off");
+    }
+
+    public void soundMode(String morseString, int LongTime, int ShortTime, int TermTime, int soundTrackNum) {
+        MosSound mosSound = new MosSound(getApplicationContext());
+        long[] customTimings_sound = new long[resultText.length()];
+        int[] customOnOff_sound = new int[resultText.length()];  // 1 = on, 0 = off
+        int tempCount = 0;
+
+        for (char temp : morseString.toCharArray()) {  // 모스 부호 분석해서 타이밍 맞추기
+            //Log.i(TAG, "temp : " + temp);
+            if (temp == '-') {
+                customTimings_sound[tempCount] = LongTime;
+                customOnOff_sound[tempCount] = 1;
+            } else if (temp == '*') {
+                customTimings_sound[tempCount] = ShortTime;
+                customOnOff_sound[tempCount] = 1;
+            } else {
+                customTimings_sound[tempCount] = ShortTime;
+                customOnOff_sound[tempCount] = 0;
+            }
+            tempCount += 1;
+        }
+
+        mosSound.SoundSetting(soundTrackNum);
+        mosSound.SoundPlay(customTimings_sound, customOnOff_sound, TermTime);
+    }
+
+    // 트랜지션 함수 ===============================================================================
+    private void setupWindowAnimations() {
         //Slide slide = new Slide();
         Fade fade = new Fade();
         fade.setDuration(1000);
@@ -190,7 +307,7 @@ public class MainActivity extends AppCompatActivity {
         getWindow().setReenterTransition(slide);
     }
 
-    // 결과 업데이트 함수
+    // 결과 업데이트 함수 ==========================================================================
     private void UpdateUI(StringBuffer result) {
         resultText.setText(result);
         Log.i(TAG, "Update Data : " + result);
@@ -211,11 +328,29 @@ public class MainActivity extends AppCompatActivity {
 
         switch (item.getItemId()) {
             case R.id.light:
+                // 플래시 기능 확인
+                if (getApplicationContext().getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH)) {
+                    //Log.i(TAG, "Light 기능 있음");
+                } else {  // 플래시 기능이 없을 때 접근시 실행
+                    Toast.makeText(getApplicationContext(), "라이트 기능이 없습니다.", Toast.LENGTH_SHORT).show();
+                    //Log.i(TAG, "Light 기능 없음");
+                    break;
+                }
+
                 // 카메라 권한 확인 (빛 이용을 위해)
+                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.M) {
+                    cameraVersion = 1;
+                } else {
+                    cameraVersion = 2;
+                }
                 String permission[] = {Manifest.permission.CAMERA};
                 boolean lightGranted;
-                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.M) {  // 21 버전 이하는 카메라 권한이 필요함 (카메라 1 API 사용)
+
+                if (cameraVersion == 1) {  // 21 버전 이하는 카메라 권한이 필요함 (카메라 1 API 사용)
                     lightGranted = (checkSelfPermission(permission[0]) == PackageManager.PERMISSION_GRANTED);
+                    if (!lightGranted) {
+                        requestPermissions(permission, 1);  // 권한 신청 (카메라)
+                    }
                 } else {  // 그 이상은 카메라 권한이 필요없음 (카메라 2 API 사용)
                     lightGranted = true;
                 }
@@ -231,7 +366,6 @@ public class MainActivity extends AppCompatActivity {
                 } else {  // 권한이 없을 경우
                     item.setIcon(R.drawable.ic_light_off);
                     lightEnable = false;
-                    requestPermissions(permission, 1);
                 }
                 break;
             case R.id.vib:
@@ -241,6 +375,15 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     item.setIcon(R.drawable.ic_vibe_on);
                     vibeEnable = true;
+                }
+                break;
+            case R.id.sound:
+                if (soundEnable) {
+                    item.setIcon(R.drawable.ic_sound_off);
+                    soundEnable = false;
+                } else {
+                    item.setIcon(R.drawable.ic_sound_on);
+                    soundEnable = true;
                 }
                 break;
             case R.id.new_info:
@@ -640,8 +783,7 @@ public class MainActivity extends AppCompatActivity {
         return 100;  // 배열에 없는 경우 없는 인덱스 번호를 넘겨줌
     }
 
-    // 스레드 클래스 처리 ==========================================================================
-    // 1번 스레드
+    // UI 업데이트 스레드 ==========================================================================
     public class UpdateThread extends Thread {  // 다운로드 작업을 위한 스레드입니다.
         public void run(String str) {  // 스레드에서 동작
             try {

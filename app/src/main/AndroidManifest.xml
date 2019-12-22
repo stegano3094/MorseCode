@@ -18,10 +18,10 @@
         android:theme="@style/AppTheme">
         <activity
             android:name=".SettingsActivity"
-            android:label="@string/title_activity_settings"
+            android:label="@string/actionbar_title_activity_settings"
             android:screenOrientation="portrait"></activity>
         <activity android:name=".InfoActivity"
-            android:label=""
+            android:label="@string/actionbar_title_activity_info"
             android:screenOrientation="portrait" />
         <activity android:name=".MainActivity"
             android:windowSoftInputMode="adjustNothing"

@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">MorseCode</string>
-    <string name="title_activity_settings">Settings</string>
+    <string name="actionbar_title_activity_settings">Settings</string>
+    <string name="actionbar_title_activity_info">CodeBook</string>
 
     <string name="no_result_data">출력 결과가 없습니다.</string>
 

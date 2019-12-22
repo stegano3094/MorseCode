@@ -3,8 +3,6 @@ package com.steganowork.morsecode;
 import android.content.Context;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
-import android.util.Log;
-import android.widget.Toast;
 
 public class MosVib {
     Vibrator vib;

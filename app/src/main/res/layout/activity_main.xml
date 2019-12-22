@@ -84,4 +84,31 @@
             android:textSize="15sp" />
     </com.github.florent37.materialtextfield.MaterialTextField>
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="13dp"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/materialTextField"
+        app:layout_constraintVertical_bias="0.12">
+
+        <TextView
+            android:id="@+id/textView5"
+            android:layout_gravity="center"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="속도" />
+
+        <org.adw.library.widgets.discreteseekbar.DiscreteSeekBar
+            android:id="@+id/discreteSeekBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:dsb_max="10"
+            app:dsb_min="1" />
+    </LinearLayout>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

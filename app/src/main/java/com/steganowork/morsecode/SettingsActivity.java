@@ -29,12 +29,6 @@ public class SettingsActivity extends AppCompatActivity {
         setupWindowAnimations();  // 트랜지션 함수
     }
 
-    public static class SettingsFragment extends PreferenceFragmentCompat {
-        @Override
-        public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
-            setPreferencesFromResource(R.xml.root_preferences, rootKey);
-        }
-    }
 
     private void setupWindowAnimations() {  // 트랜지션 함수
         //Slide slide = new Slide();
@@ -48,6 +42,13 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     // 액션 바 =====================================================================================
+    public static class SettingsFragment extends PreferenceFragmentCompat {
+        @Override
+        public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+            setPreferencesFromResource(R.xml.root_preferences, rootKey);
+        }
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         return true;

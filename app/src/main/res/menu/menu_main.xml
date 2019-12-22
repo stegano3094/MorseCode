@@ -8,6 +8,7 @@
         android:title="light"
         app:showAsAction="always" >
     </item>
+
     <item
         android:id="@+id/vib"
         android:icon="@drawable/ic_vibe_off"
@@ -16,17 +17,26 @@
     </item>
 
     <item
+        android:id="@+id/sound"
+        android:icon="@drawable/ic_sound_off"
+        android:title="sound"
+        app:showAsAction="always" >
+    </item>
+
+    <item
         android:id="@+id/more"
         android:icon="@drawable/ic_more"
         android:title="more"
-        app:showAsAction="ifRoom" >
+        app:showAsAction="always" >
         <menu >
             <item
                 android:id="@+id/new_info"
-                android:title="Info" />
+                android:title="CodeBook"
+                app:showAsAction="never" />
             <item
                 android:id="@+id/Settings"
-                android:title="Settings" />
+                android:title="Settings"
+                app:showAsAction="never" />
         </menu>
     </item>
 </menu>
