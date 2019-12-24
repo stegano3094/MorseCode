@@ -6,12 +6,21 @@
     <string name="no_result_data">출력 결과가 없습니다.</string>
 
     <!-- Preference Titles -->
+    <string name="set_header">Settings</string>
     <string name="dev_header">Developer Info</string>
+
+    <!-- Settings Preferences -->
+    <string name="set_language_title">Default Language</string>
+    <string name="set_language_summary">기본 언어를 설정합니다.</string>
+    <string name="set_speed_title">Play length</string>
+    <string name="set_speed_summary">재생 길이를 설정합니다.</string>
+    <string name="set_save_title">Save Settings</string>
+    <string name="set_save_summary">진동, 라이트, 소리 등 설정을 저장합니다.</string>
 
     <!-- Developer Info Preferences -->
     <string name="dev_e_title">개발자 이메일</string>
     <string name="dev_e_summary">steganowork@naver.com</string>
     <string name="dev_v_title">버전 정보</string>
-    <string name="dev_v_summary">Version 1.0.0</string>
+    <string name="dev_v_summary">Version</string>
 
 </resources>

@@ -14,23 +14,57 @@
   ~ limitations under the License.
   -->
 
-<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:title="@string/set_header">
 
-    <PreferenceCategory app:title="@string/dev_header"
-        app:iconSpaceReserved="false">
-        <Preference
-            app:title="@string/dev_e_title"
-            app:summary="@string/dev_e_summary"
+        <ListPreference
+            android:dialogIcon="@drawable/ic_change"
+            app:entries="@array/TranslationLanguage"
+            app:entryValues="@array/TranslationLanguageValue"
+            app:key="language"
+            app:title="@string/set_language_title"
+            app:useSimpleSummaryProvider="true" />
+
+        <SeekBarPreference
+            app:key="play_len"
+            app:min="1"
+            app:defaultValue="1"
+            android:max="10"
             app:selectable="false"
-            app:iconSpaceReserved="false">
+            app:showSeekBarValue="true"
+            app:summary="@string/set_speed_summary"
+            app:title="@string/set_speed_title">
+        </SeekBarPreference>
+
+        <SwitchPreferenceCompat
+            app:key="save"
+            app:summary="@string/set_save_summary"
+            app:title="@string/set_save_title">
+        </SwitchPreferenceCompat>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:title="@string/dev_header">
+
+        <Preference
+            app:enableCopying="true"
+            app:selectable="false"
+            app:summary="@string/dev_e_summary"
+            app:title="@string/dev_e_title">
         </Preference>
+
         <Preference
             app:key="app_version"
-            app:title="@string/dev_v_title"
-            app:summary="@string/dev_v_summary"
             app:selectable="false"
-            app:iconSpaceReserved="false">
+            app:summary="@string/dev_v_summary"
+            app:title="@string/dev_v_title">
         </Preference>
+
     </PreferenceCategory>
 
 </PreferenceScreen>

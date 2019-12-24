@@ -3,6 +3,7 @@ package com.steganowork.morsecode;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -17,16 +18,14 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.EditText;
-import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.preference.PreferenceManager;
 
 import com.jaredrummler.materialspinner.MaterialSpinner;
-
-import org.adw.library.widgets.discreteseekbar.DiscreteSeekBar;
 
 import java.util.TreeMap;
 import java.util.regex.Pattern;
@@ -41,6 +40,7 @@ public class MainActivity extends AppCompatActivity {
     private static TreeMap<String, String> MorseSpecial;
     TextView resultText;
     EditText editText;
+    MaterialSpinner spinner;
 
     FeedbackThread feedbackThread_vid = null;
     FeedbackThread feedbackThread_light = null;
@@ -56,8 +56,14 @@ public class MainActivity extends AppCompatActivity {
     String noResultData;
     String languageState = "";
     String[] languageAvailable;
-    int cameraVersion;
+    int cameraVersion = 0;
     int speed = 5;
+
+    SharedPreferences sharedPreferences;
+    SharedPreferences.Editor editor;
+    String savedLanguage;
+    int savedPlayLength;
+    boolean savedSave;
 
     private UpdateThread mUpdateThread;
 
@@ -69,7 +75,7 @@ public class MainActivity extends AppCompatActivity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);   // 화면꺼짐 방지
         backPressCloseHandler = new BackPressCloseHandler(this);      // 뒤로가기 버튼
 
-        // 필요한 변수 선언
+        languageAvailable = getResources().getStringArray(R.array.TranslationLanguage);  // 가능한 언어
         noResultData = getResources().getString(R.string.no_result_data);
         resultText = (TextView) findViewById(R.id.textView7);
         resultText.setText(noResultData);  // 초기화
@@ -86,10 +92,8 @@ public class MainActivity extends AppCompatActivity {
         MorseNumber = morseCodeBook.getMorseNumber();
         MorseSpecial = morseCodeBook.getMorseSpecial();
 
-
         // 모드 변경 -------------------------------------------------------------------------------
-        languageAvailable = getResources().getStringArray(R.array.TranslationLanguage);  // 가능한 언어
-        MaterialSpinner spinner = (MaterialSpinner) findViewById(R.id.spinner);  // 스피너
+        spinner = (MaterialSpinner) findViewById(R.id.spinner);  // 스피너
         spinner.setItems(getResources().getStringArray(R.array.TranslationLanguage));
         spinner.setOnItemSelectedListener(new MaterialSpinner.OnItemSelectedListener<String>() {
             @Override
@@ -120,40 +124,27 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // 속도 조절 -------------------------------------------------------------------------------
-        DiscreteSeekBar discreteSeekBar = (DiscreteSeekBar) findViewById(R.id.discreteSeekBar);
-        discreteSeekBar.setNumericTransformer(new DiscreteSeekBar.NumericTransformer() {
-            @Override
-            public int transform(int value) {
-                speed = value + 5;
-                return value;
-            }
-        });
-
         // 피드백 (빛, 진동) -----------------------------------------------------------------------
         resultText.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 int runNum;
 
-                if(!isVibStarted && !isLightStarted && !isSoundStarted) {
+                if (!isVibStarted && !isLightStarted && !isSoundStarted) {
                     if (vibeEnable) {  // 진동 보내기
                         runNum = 1;
-                        feedbackThread_vid = new FeedbackThread(runNum);
-                        feedbackThread_vid.setSpeed(speed);
+                        feedbackThread_vid = new FeedbackThread(runNum, speed);
                         feedbackThread_vid.start();
                     }
                     if (lightEnable) {  // 빛 보내기
                         runNum = 2;
-                        feedbackThread_light = new FeedbackThread(runNum);
-                        feedbackThread_light.setSpeed(speed);
+                        feedbackThread_light = new FeedbackThread(runNum, speed);
                         feedbackThread_light.start();
                     }
                     if (soundEnable) {  // 소리 보내기
                         runNum = 3;
                         int soundTrackNum = 1;  // tkdnse1~2
-                        feedbackThread_sound = new FeedbackThread(runNum, soundTrackNum);
-                        feedbackThread_sound.setSpeed(speed);
+                        feedbackThread_sound = new FeedbackThread(runNum, soundTrackNum, speed);
                         feedbackThread_sound.start();
                     }
                 }
@@ -172,15 +163,21 @@ public class MainActivity extends AppCompatActivity {
         int soundTrackNum;
         String morseString = resultText.getText().toString();  // 현재 결과 가져옴
 
-        public FeedbackThread(int runNUm) {
+        public FeedbackThread(int runNUm, int speed) {
             Log.i(TAG, "feedback Thread on");
             this.runNum = runNUm;
+            this.LongTime = LongTime * speed;
+            this.ShortTime = ShortTime * speed;
+            this.TermTime = TermTime * speed;
         }
 
-        public FeedbackThread(int runNUm, int soundTrackNum) {
+        public FeedbackThread(int runNUm, int soundTrackNum, int speed) {
             Log.i(TAG, "feedback Thread on");
             this.runNum = runNUm;
             this.soundTrackNum = soundTrackNum;
+            this.LongTime = LongTime * speed;
+            this.ShortTime = ShortTime * speed;
+            this.TermTime = TermTime * speed;
         }
 
         public void run() {
@@ -201,15 +198,9 @@ public class MainActivity extends AppCompatActivity {
                     soundMode(morseString, LongTime, ShortTime, TermTime, soundTrackNum);
                     isSoundStarted = false;
                 }
-            } catch (Exception e){
+            } catch (Exception e) {
                 e.printStackTrace();
             }
-        }
-
-        public void setSpeed(int speed) {
-            this.LongTime = LongTime * speed;
-            this.ShortTime = ShortTime * speed;
-            this.TermTime = TermTime * speed;
         }
     }
 
@@ -271,7 +262,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void soundMode(String morseString, int LongTime, int ShortTime, int TermTime, int soundTrackNum) {
-        MosSound mosSound = new MosSound(getApplicationContext());
+        //Log.i(TAG, "소리 On, morseString : " + morseString);
+        MosSound mosSound = new MosSound(getApplicationContext());  // 소리를 사용할 수 있는 객체를 생성
         long[] customTimings_sound = new long[resultText.length()];
         int[] customOnOff_sound = new int[resultText.length()];  // 1 = on, 0 = off
         int tempCount = 0;
@@ -315,10 +307,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // 옵션 메뉴 ===================================================================================
+    Menu menu;
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater menuInflater = getMenuInflater();
         menuInflater.inflate(R.menu.menu_main, menu);
+        this.menu = menu;
+
+        // 설정값 세팅
+        getPrefSettings();  // 메뉴가 생성될 때 설정값 세팅함
+
         return true;
     }
 
@@ -344,14 +342,14 @@ public class MainActivity extends AppCompatActivity {
                     cameraVersion = 2;
                 }
                 String permission[] = {Manifest.permission.CAMERA};
-                boolean lightGranted;
+                boolean lightGranted = false;
 
                 if (cameraVersion == 1) {  // 21 버전 이하는 카메라 권한이 필요함 (카메라 1 API 사용)
                     lightGranted = (checkSelfPermission(permission[0]) == PackageManager.PERMISSION_GRANTED);
                     if (!lightGranted) {
                         requestPermissions(permission, 1);  // 권한 신청 (카메라)
                     }
-                } else {  // 그 이상은 카메라 권한이 필요없음 (카메라 2 API 사용)
+                } else if(cameraVersion == 2){  // 그 이상은 카메라 권한이 필요없음 (카메라 2 API 사용)
                     lightGranted = true;
                 }
 
@@ -399,6 +397,68 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
+    // 사용자 설정 세팅 ============================================================================
+    private void setPrefSettings() {  // 저장하기
+        if (savedSave) {  // 진동, 소리, 라이트 등 설정
+            editor = sharedPreferences.edit();
+            editor.putBoolean("vibeEnable", vibeEnable);
+            editor.putBoolean("lightEnable", lightEnable);
+            editor.putInt("cameraVersion", cameraVersion);  // 라이트 사용 가능할 때 카메라 버전도 저장함
+            editor.putBoolean("soundEnable", soundEnable);
+            Log.i(TAG, "vibeEnable : " + vibeEnable + ", lightEnable : " + lightEnable + "(cameraVersion : " + cameraVersion + "), soundEnable : " + soundEnable);
+            editor.commit();
+        }
+    }
+
+    private void getPrefSettings() {  // 불러오기
+        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        savedLanguage = sharedPreferences.getString("language", "0");
+        savedPlayLength = sharedPreferences.getInt("play_len", 1);
+        savedSave = sharedPreferences.getBoolean("save", false);
+        Log.i(TAG, "savedLanguage : " + savedLanguage +
+                ", parseInt : " + Integer.parseInt(savedLanguage) + ", savedPlayLength : " + savedPlayLength + ", savedSave : " + savedSave);
+
+        spinner.setSelectedIndex(Integer.parseInt(savedLanguage));  // 기본 언어 설정 (스피너 글씨만 세팅)
+        languageState = languageAvailable[Integer.parseInt(savedLanguage)];  // 기본 언어 설정 (변환할 때 사용됨)
+        speed = savedPlayLength + 3;  // 재생 길이 설정 (+는 시간 조금 더 늦추기 위함, 너무 빠르면 소리 재생이 안됌)
+
+        if (savedSave) {  // 진동, 소리, 라이트 등 설정
+            lightEnable = sharedPreferences.getBoolean("lightEnable", false);
+            cameraVersion = sharedPreferences.getInt("cameraVersion", 0);  // 초기값 0번은 카메라 사용불가능한 값임
+            setIcon(0, lightEnable);
+            vibeEnable = sharedPreferences.getBoolean("vibeEnable", false);
+            setIcon(1, vibeEnable);
+            soundEnable = sharedPreferences.getBoolean("soundEnable", false);
+            setIcon(2, soundEnable);
+            Log.i(TAG, "vibeEnable : " + vibeEnable + ", lightEnable : " + lightEnable + "(cameraVersion : " + cameraVersion + "), soundEnable : " + soundEnable);
+        }
+    }
+
+    private void setIcon(int setInt, boolean setBoolean) {  // 액션바 아이콘 세팅하기
+        MenuItem[] item = new MenuItem[3];
+        item[setInt] = menu.getItem(setInt);  // light = 0, vibe = 1, sound = 2
+
+        if (setInt == 0) {
+            if (setBoolean) {
+                item[setInt].setIcon(R.drawable.ic_light_on);
+            } else {
+                item[setInt].setIcon(R.drawable.ic_light_off);
+            }
+        } else if (setInt == 1) {
+            if (setBoolean) {
+                item[setInt].setIcon(R.drawable.ic_vibe_on);
+            } else {
+                item[setInt].setIcon(R.drawable.ic_vibe_off);
+            }
+        } else if (setInt == 2) {
+            if (setBoolean) {
+                item[setInt].setIcon(R.drawable.ic_sound_on);
+            } else {
+                item[setInt].setIcon(R.drawable.ic_sound_off);
+            }
+        }
+    }
+
     // 모드 변경 ===================================================================================
     private void ChangeMode(String getMode) {
         languageState = "";
@@ -408,12 +468,10 @@ public class MainActivity extends AppCompatActivity {
                 languageState.equals(languageAvailable[3])) {  // 모스부호 -> 영어, 한국어, 숫자 등 으로 변환
             editText.setHint("Input Morse Data");
             editText.setText("");
-
             Toast.makeText(getApplicationContext(), "모스부호를 입력하세요.", Toast.LENGTH_SHORT).show();
         } else if (languageState.equals(languageAvailable[0])) {  // 영어, 한국어, 숫자 등 -> 모스부호로 변환
             editText.setHint("Input Data");
             editText.setText("");
-
             Toast.makeText(getApplicationContext(), "영어 또는 한국어를 입력하세요.", Toast.LENGTH_SHORT).show();
         }
         //Log.i(TAG, "languageState : " + languageState);
@@ -432,6 +490,11 @@ public class MainActivity extends AppCompatActivity {
 
         for (int i = 0; i < character.length; i++) {
             Log.i(TAG, "character[" + i + "] : " + character[i]);  // 단어 단위 출력
+
+            if(character[i].equals(" ")){  // 띄어쓰기일 경우
+                encode.append(" ");
+                continue;
+            }
 
             boolean englishPattern = Pattern.matches("^[a-zA-Z]*$", character[i]);
             boolean koreanPattern = Pattern.matches("^[ㄱ-ㅎㅏ-ㅣ가-힣]*$", character[i]);
@@ -569,7 +632,8 @@ public class MainActivity extends AppCompatActivity {
             for (int i = 0; i < getSlice.length; i++) {
                 Log.i(TAG, "getSlice.length : " + getSlice.length + ", getSlice[" + i + "] : " + getSlice[i]);
                 if (getSlice[i].equals("")) {  // 띄어쓰기는 지워지고 배열이 증가하여 다시 띄어쓰기를 넣어줌
-                    getSlice[i] = " ";
+                    decode.append(" ");
+                    continue;
                 }
                 String KorValue = "";
 
@@ -840,8 +904,15 @@ public class MainActivity extends AppCompatActivity {
 
     // 생명주기 ====================================================================================
     @Override
+    protected void onRestart() {
+        super.onRestart();
+        getPrefSettings();  // 세팅값 불러옴
+    }
+
+    @Override
     protected void onStop() {
         super.onStop();
+        setPrefSettings();  // 세팅값 저장함
     }
 
     @Override

@@ -146,6 +146,5 @@ public class MorseCodeBook {
         MorseSpecial.put("!", "*-***");
         MorseSpecial.put("@", "*--*-*");
         MorseSpecial.put("+", "*-*-*");
-        MorseSpecial.put(" ", " ");
     }
 }

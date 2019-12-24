@@ -8,7 +8,9 @@ import android.view.MenuItem;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
+import androidx.preference.PreferenceScreen;
 
 public class SettingsActivity extends AppCompatActivity {
     String TAG = "SettingsActivity";
@@ -29,6 +31,16 @@ public class SettingsActivity extends AppCompatActivity {
         setupWindowAnimations();  // 트랜지션 함수
     }
 
+    public static class SettingsFragment extends PreferenceFragmentCompat {
+        @Override
+        public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+            setPreferencesFromResource(R.xml.root_preferences, rootKey);
+
+            PreferenceScreen preferenceScreen = getPreferenceScreen();
+            Preference pVersion = preferenceScreen.findPreference("app_version");
+            pVersion.setSummary(getResources().getString(R.string.dev_v_summary) + " : 1.0.2");
+        }
+    }
 
     private void setupWindowAnimations() {  // 트랜지션 함수
         //Slide slide = new Slide();
@@ -42,13 +54,6 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     // 액션 바 =====================================================================================
-    public static class SettingsFragment extends PreferenceFragmentCompat {
-        @Override
-        public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
-            setPreferencesFromResource(R.xml.root_preferences, rootKey);
-        }
-    }
-
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         return true;
