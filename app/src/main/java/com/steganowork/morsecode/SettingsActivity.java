@@ -1,5 +1,8 @@
 package com.steganowork.morsecode;
 
+import android.content.Context;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.transition.Fade;
 import android.transition.Slide;
@@ -14,6 +17,7 @@ import androidx.preference.PreferenceScreen;
 
 public class SettingsActivity extends AppCompatActivity {
     String TAG = "SettingsActivity";
+    static String versionName = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,6 +32,8 @@ public class SettingsActivity extends AppCompatActivity {
             actionBar.setDisplayHomeAsUpEnabled(true);
         }
 
+        versionName = getVersionName(getApplicationContext());
+
         setupWindowAnimations();  // 트랜지션 함수
     }
 
@@ -38,7 +44,17 @@ public class SettingsActivity extends AppCompatActivity {
 
             PreferenceScreen preferenceScreen = getPreferenceScreen();
             Preference pVersion = preferenceScreen.findPreference("app_version");
-            pVersion.setSummary(getResources().getString(R.string.dev_v_summary) + " : 1.0.2");
+            pVersion.setSummary(getResources().getString(R.string.dev_v_summary) + " : " + versionName);
+        }
+    }
+
+    public String getVersionName(Context context){
+        try {
+            PackageInfo packageInfo = context.getPackageManager().getPackageInfo(
+                    context.getPackageName(), 0);
+            return packageInfo.versionName;
+        } catch (PackageManager.NameNotFoundException e) {
+            return null;
         }
     }
 

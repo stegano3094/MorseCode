@@ -3,7 +3,7 @@
     <string name="actionbar_title_activity_settings">Settings</string>
     <string name="actionbar_title_activity_info">CodeBook</string>
 
-    <string name="no_result_data">출력 결과가 없습니다.</string>
+    <string name="no_result_data">There is no output.</string>
 
     <!-- Preference Titles -->
     <string name="set_header">Settings</string>
@@ -11,16 +11,22 @@
 
     <!-- Settings Preferences -->
     <string name="set_language_title">Default Language</string>
-    <string name="set_language_summary">기본 언어를 설정합니다.</string>
+    <string name="set_language_summary">Set your default language.</string>
     <string name="set_speed_title">Play length</string>
-    <string name="set_speed_summary">재생 길이를 설정합니다.</string>
+    <string name="set_speed_summary">Set the playback length.</string>
     <string name="set_save_title">Save Settings</string>
-    <string name="set_save_summary">진동, 라이트, 소리 등 설정을 저장합니다.</string>
+    <string name="set_save_summary">Save settings such as vibrations, lights, and sounds.</string>
 
     <!-- Developer Info Preferences -->
-    <string name="dev_e_title">개발자 이메일</string>
+    <string name="dev_e_title">Developer E-mail</string>
     <string name="dev_e_summary">steganowork@naver.com</string>
-    <string name="dev_v_title">버전 정보</string>
+    <string name="dev_v_title">Version Information</string>
     <string name="dev_v_summary">Version</string>
+
+
+    <!-- AD Banner -->
+    <string name="admob_app_id">ca-app-pub-9382651871536803~2537844255</string>
+    <string name="banner_ad_unit_id">ca-app-pub-9382651871536803/3359971335</string>
+    <string name="banner_ad_unit_id_for_test">ca-app-pub-3940256099942544/6300978111</string>
 
 </resources>

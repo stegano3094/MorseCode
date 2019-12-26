@@ -25,8 +25,14 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.preference.PreferenceManager;
 
+import com.google.android.gms.ads.AdListener;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.MobileAds;
 import com.jaredrummler.materialspinner.MaterialSpinner;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
@@ -66,6 +72,7 @@ public class MainActivity extends AppCompatActivity {
     boolean savedSave;
 
     private UpdateThread mUpdateThread;
+    private AdView mAdView;  // 광고뷰
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -150,6 +157,9 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
+        // 광고 ------------------------------------------------------------------------------------
+        Ad();
     }
 
     // 동시 수행을 위한 스레드 =====================================================================
@@ -866,6 +876,52 @@ public class MainActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
         }
+    }
+
+    // 광고 ========================================================================================
+    private void Ad(){
+        final String adTag = "Ad()";
+        MobileAds.initialize(this, getString(R.string.banner_ad_unit_id_for_test));
+        mAdView = findViewById(R.id.adView);
+        AdRequest adRequest = new AdRequest.Builder().build();
+        mAdView.loadAd(adRequest);
+
+        // 광고가 제대로 로드 되는지 테스트 하기 위한 코드
+        mAdView.setAdListener(new AdListener() {
+            @Override
+            public void onAdLoaded() {
+                // Code to be executed when an ad finishes loading.
+                Log.i(adTag, "onAdLoaded");
+            }
+
+            @Override
+            public void onAdFailedToLoad(int errorCode) {
+                // Code to be executed when an ad request fails.
+                Log.i(adTag, "onAdFailedToLoad " + errorCode);
+            }
+
+            @Override
+            public void onAdOpened() {
+                // Code to be executed when an ad opens an overlay that
+                // covers the screen.
+            }
+
+            @Override
+            public void onAdClicked() {
+                // Code to be executed when the user clicks on an ad.
+            }
+
+            @Override
+            public void onAdLeftApplication() {
+                // Code to be executed when the user has left the app.
+            }
+
+            @Override
+            public void onAdClosed() {
+                // Code to be executed when the user is about to return
+                // to the app after tapping on an ad.
+            }
+        });
     }
 
     // 뒤로가기 2번 누름 ===========================================================================
