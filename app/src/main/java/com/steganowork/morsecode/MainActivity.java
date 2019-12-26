@@ -30,9 +30,9 @@ import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.MobileAds;
 import com.jaredrummler.materialspinner.MaterialSpinner;
+import com.onestore.app.licensing.AppLicenseChecker;
+import com.onestore.app.licensing.LicenseCheckerListener;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
@@ -73,6 +73,8 @@ public class MainActivity extends AppCompatActivity {
 
     private UpdateThread mUpdateThread;
     private AdView mAdView;  // 광고뷰
+
+    AppLicenseChecker appLicenseChecker;  // 원스토어에서 라이센스 체크하도록
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -160,6 +162,60 @@ public class MainActivity extends AppCompatActivity {
 
         // 광고 ------------------------------------------------------------------------------------
         Ad();
+
+        // 원스토어 라이센스 체크 ------------------------------------------------------------------
+        appLicenseChecker = new AppLicenseChecker(MainActivity.this, getString(R.string.public_key), new AppLicenseListener());
+        //Flexible
+        appLicenseChecker.queryLicense();
+    }
+
+
+    // 원스토어 라이센스 체크 ======================================================================
+    private class AppLicenseListener implements LicenseCheckerListener {
+        @Override
+        public void granted(String license, String signature) {
+            if (isFinishing()) {
+                return;
+            }
+            Toast.makeText(MainActivity.this,"granted", Toast.LENGTH_LONG).show();
+        }
+
+        @Override
+        public void denied() {
+            if (isFinishing()) {
+                return;
+            }
+            Toast.makeText(MainActivity.this,"denied", Toast.LENGTH_LONG).show();
+        }
+
+        @Override
+        public void error(int errorCode, String error) {
+            if (isFinishing()) {
+                return;
+            }
+
+            if (2000 == errorCode && 2100 > errorCode ) {
+                // TODO: 원스토어에 문의해주세요.
+            } else if (2100 == errorCode) {
+                // TODO: 네트워크 상태를 체크해주세요.
+            } else if (2101 == errorCode) {
+                // TODO: 원스토어 로그인을 해주세요.
+            } else if (2102 == errorCode) {
+                // TODO: 원스토어 서비스 설치중입니다.
+            } else if (2103 == errorCode) {
+                // TODO: 원스토어를 설치해주세요.
+            }  else if (2104 == errorCode) {
+                // TODO: 백그라운드 서비스에서는 진행할 수 없습니다.
+            } else if (2 == errorCode) {
+                // TODO: 네트워크 상태를 체크해주세요.
+            } else if (3 == errorCode) {
+                // TODO: 라이브러리를 최신버전으로 업데이트 해주세요.
+            } else if (5 == errorCode) {
+                // TODO: 원스토어에 문의해주세요.
+            } else {
+                // TODO: 원스토어에 문의해주세요.
+            }
+        }
     }
 
     // 동시 수행을 위한 스레드 =====================================================================
@@ -881,7 +937,7 @@ public class MainActivity extends AppCompatActivity {
     // 광고 ========================================================================================
     private void Ad(){
         final String adTag = "Ad()";
-        MobileAds.initialize(this, getString(R.string.banner_ad_unit_id_for_test));
+        MobileAds.initialize(this, getString(R.string.banner_ad_unit_id));
         mAdView = findViewById(R.id.adView);
         AdRequest adRequest = new AdRequest.Builder().build();
         mAdView.loadAd(adRequest);
@@ -973,6 +1029,8 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        if (null != appLicenseChecker)
+            appLicenseChecker.destroy();
         super.onDestroy();
     }
 }
