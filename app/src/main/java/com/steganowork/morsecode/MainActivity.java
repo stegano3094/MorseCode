@@ -2,9 +2,12 @@ package com.steganowork.morsecode;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
@@ -74,7 +77,8 @@ public class MainActivity extends AppCompatActivity {
     private UpdateThread mUpdateThread;
     private AdView mAdView;  // 광고뷰
 
-    AppLicenseChecker appLicenseChecker;  // 원스토어에서 라이센스 체크하도록
+    private AppLicenseChecker appLicenseChecker;  // 원스토어에서 라이센스 체크하도록
+    private static String PID;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -138,84 +142,186 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 int runNum;
+                String morseString = resultText.getText().toString();  // 현재 결과 가져옴
+                boolean run = true;
 
                 if (!isVibStarted && !isLightStarted && !isSoundStarted) {
-                    if (vibeEnable) {  // 진동 보내기
-                        runNum = 1;
-                        feedbackThread_vid = new FeedbackThread(runNum, speed);
-                        feedbackThread_vid.start();
+                    for (char temp : morseString.toCharArray()) {  // 문자 분석 후 모스부호일 경우만 실행하도록
+                        //Log.i(TAG, "temp : " + temp);
+                        if (temp == '-' || temp == '*' || temp == ' ') {
+                        } else {
+                            run = false;
+                            break;
+                        }
                     }
-                    if (lightEnable) {  // 빛 보내기
-                        runNum = 2;
-                        feedbackThread_light = new FeedbackThread(runNum, speed);
-                        feedbackThread_light.start();
-                    }
-                    if (soundEnable) {  // 소리 보내기
-                        runNum = 3;
-                        int soundTrackNum = 1;  // tkdnse1~2
-                        feedbackThread_sound = new FeedbackThread(runNum, soundTrackNum, speed);
-                        feedbackThread_sound.start();
+
+                    Log.i(TAG, "run : " + run);
+                    if (run) {  // 결과 값이 모두 모스부호일 경우 실행 가능
+                        if (vibeEnable) {  // 진동 보내기
+                            runNum = 1;
+                            feedbackThread_vid = new FeedbackThread(runNum, speed);
+                            feedbackThread_vid.start();
+                        }
+                        if (lightEnable) {  // 빛 보내기
+                            runNum = 2;
+                            feedbackThread_light = new FeedbackThread(runNum, speed);
+                            feedbackThread_light.start();
+                        }
+                        if (soundEnable) {  // 소리 보내기
+                            runNum = 3;
+                            int soundTrackNum = 1;  // tkdnse1~2
+                            feedbackThread_sound = new FeedbackThread(runNum, soundTrackNum, speed);
+                            feedbackThread_sound.start();
+                        }
                     }
                 }
             }
         });
 
         // 광고 ------------------------------------------------------------------------------------
-        Ad();
+        if(true) {
+            Ad();
+        }
 
         // 원스토어 라이센스 체크 ------------------------------------------------------------------
-        appLicenseChecker = new AppLicenseChecker(MainActivity.this, getString(R.string.public_key), new AppLicenseListener());
-        //Flexible
-        appLicenseChecker.queryLicense();
+        if(true) {
+            appLicenseChecker = new AppLicenseChecker(MainActivity.this, getString(R.string.public_key), new AppLicenseListener());
+            //Flexible
+            appLicenseChecker.queryLicense();  // queryLicense()를 통해서 라이센스 체크 요청
+        }
     }
 
-
     // 원스토어 라이센스 체크 ======================================================================
-    private class AppLicenseListener implements LicenseCheckerListener {
+    private class AppLicenseListener implements LicenseCheckerListener {  // queryLicense()의 응답 결과로 전달받음
         @Override
         public void granted(String license, String signature) {
-            if (isFinishing()) {
-                return;
-            }
-            Toast.makeText(MainActivity.this,"granted", Toast.LENGTH_LONG).show();
+            if (isFinishing()) return;
+            //Toast.makeText(MainActivity.this, "granted", Toast.LENGTH_LONG).show();
         }
 
         @Override
         public void denied() {
-            if (isFinishing()) {
-                return;
-            }
-            Toast.makeText(MainActivity.this,"denied", Toast.LENGTH_LONG).show();
+            if (isFinishing()) return;
+            //Toast.makeText(MainActivity.this, "denied", Toast.LENGTH_LONG).show();
+            deniedDialog();
         }
 
         @Override
         public void error(int errorCode, String error) {
-            if (isFinishing()) {
-                return;
-            }
+            if (isFinishing()) return;
 
-            if (2000 == errorCode && 2100 > errorCode ) {
-                // TODO: 원스토어에 문의해주세요.
-            } else if (2100 == errorCode) {
-                // TODO: 네트워크 상태를 체크해주세요.
-            } else if (2101 == errorCode) {
-                // TODO: 원스토어 로그인을 해주세요.
-            } else if (2102 == errorCode) {
-                // TODO: 원스토어 서비스 설치중입니다.
-            } else if (2103 == errorCode) {
-                // TODO: 원스토어를 설치해주세요.
-            }  else if (2104 == errorCode) {
-                // TODO: 백그라운드 서비스에서는 진행할 수 없습니다.
-            } else if (2 == errorCode) {
-                // TODO: 네트워크 상태를 체크해주세요.
-            } else if (3 == errorCode) {
-                // TODO: 라이브러리를 최신버전으로 업데이트 해주세요.
-            } else if (5 == errorCode) {
-                // TODO: 원스토어에 문의해주세요.
-            } else {
-                // TODO: 원스토어에 문의해주세요.
+            Log.i(TAG, "errorCode : " + errorCode);
+            if (2000 == errorCode && 2100 > errorCode) {  // 원스토어에 문의해주세요.
+                unknownErrorDialog();
+            } else if (2100 == errorCode) {  // 네트워크 상태를 체크해주세요.
+                goSettingForNetwork();
+            } else if (2101 == errorCode) {  // 원스토어 로그인을 해주세요.
+                retryLoginDialog();
+            } else if (2102 == errorCode) {  // 원스토어 서비스 설치중입니다.
+                retryInstall();
+            } else if (2103 == errorCode) {  // 원스토어를 설치해주세요.
+                retryInstall();
+            } else if (2104 == errorCode) {  // 백그라운드 서비스에서는 진행할 수 없습니다.
+                retryALC();
+            } else if (1 == errorCode) {  // 원스토어 로그인을 해주세요.
+                retryLoginDialog();
+            } else if (2 == errorCode) {  // 네트워크 상태를 체크해주세요.
+                goSettingForNetwork();
+            } else if (3 == errorCode) {  // 라이브러리를 최신버전으로 업데이트 해주세요.
+                // download library link : https://github.com/ONE-store/app_license_checker
+                Toast.makeText(MainActivity.this, "최신버전 업데이트가 필요합니다.", Toast.LENGTH_SHORT).show();
+                finish();
+            } else if (5 == errorCode) {  // 원스토어에 문의해주세요.
+                unknownErrorDialog();
+            } else {  // 원스토어에 문의해주세요.
+                unknownErrorDialog();
             }
         }
+    }
+
+    private void showDialog(String message, String positiveText, String negativeText,
+                            DialogInterface.OnClickListener positiveClickListener, DialogInterface.OnClickListener negativeClickListener) {
+        AlertDialog.Builder alertDialog = new AlertDialog.Builder(this);
+        alertDialog.setMessage(message);
+        alertDialog.setPositiveButton(positiveText, positiveClickListener);
+        alertDialog.setNegativeButton(negativeText, negativeClickListener);
+        alertDialog.setCancelable(false);
+        alertDialog.show();
+    }
+
+    private void deniedDialog() {
+        showDialog(getString(R.string.does_not_exist), "ok", "finish", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface arg0, int arg1) {
+                Intent marketIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.goto_app_market_url)));
+                startActivity(marketIntent);
+                finish();
+            }
+        }, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                finish();
+            }
+        });
+    }
+
+    private void goSettingForNetwork() {
+        showDialog(getString(R.string.move_network_setting_screen), "setting", "finish", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface arg0, int arg1) {
+                Intent intent = new Intent(android.provider.Settings.ACTION_WIFI_SETTINGS);
+                startActivityForResult(intent, 0);
+            }
+        }, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                finish();
+            }
+        });
+    }
+
+    private void retryLoginDialog() {
+        showDialog(getString(R.string.required_onestore_login), "retry", "finish", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface arg0, int arg1) {
+                retryALC();
+            }
+        }, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                finish();
+            }
+        });
+    }
+
+    private void retryALC() {
+        Log.i(TAG, "retryALC()");
+        if (null == appLicenseChecker)
+            appLicenseChecker = new AppLicenseChecker(MainActivity.this, getString(R.string.public_key), new AppLicenseListener());
+        appLicenseChecker.queryLicense();
+    }
+
+    private void retryInstall() {
+        Log.i(TAG, "retryInstall()");
+        showDialog(getString(R.string.required_onestore_service_install), "ok", "finish",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface arg0, int arg1) {
+                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.download_onestore_service_url)));
+                        startActivity(intent);
+                        finish();
+                    }
+                }, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        finish();
+                    }
+                });
+    }
+
+    private void unknownErrorDialog() {  // 알 수 없는 에러 발생시 앱 종료
+        Log.i(TAG, "unknownErrorDialog()");
+        AlertDialog.Builder alertDialog = new AlertDialog.Builder(this);
+        alertDialog.setMessage(getString(R.string.unknown_error));
+        alertDialog.setPositiveButton("ok", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                finish();
+            }
+        });
+        alertDialog.setCancelable(false);
+        alertDialog.show();
     }
 
     // 동시 수행을 위한 스레드 =====================================================================
@@ -270,6 +376,32 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void lightMode(String morseString, int LongTime, int ShortTime, int TermTime) {
+        //Log.i(TAG, "플래시 On, morseString : " + morseString);
+        MosLight mosLight = new MosLight(getApplicationContext(), cameraVersion);  // 빛을 사용할 수 있는 객체를 생성
+        long[] customTimings_light = new long[resultText.length()];
+        int[] customOnOff_light = new int[resultText.length()];  // 1 = on, 0 = off
+        int tempCount = 0;
+
+        for (char temp : morseString.toCharArray()) {  // 모스 부호 분석해서 타이밍 맞추기
+            //Log.i(TAG, "temp : " + temp);
+            if (temp == '-') {
+                customTimings_light[tempCount] = LongTime;
+                customOnOff_light[tempCount] = 1;
+            } else if (temp == '*') {
+                customTimings_light[tempCount] = ShortTime;
+                customOnOff_light[tempCount] = 1;
+            } else {
+                customTimings_light[tempCount] = ShortTime;
+                customOnOff_light[tempCount] = 0;
+            }
+            tempCount += 1;
+        }
+        //Log.i(TAG, "플래시 피드백 On");
+        mosLight.LightStart(customTimings_light, customOnOff_light, TermTime);  // 플래시 시작
+        //Log.i(TAG, "플래시 Off");
+    }
+
     public void vibeMode(String morseString, int Amp, int LongTime, int ShortTime, int TermTime) {
         //Log.i(TAG, "진동 On, morseString : " + morseString);
         MosVib mosVib = new MosVib(getApplicationContext());  // 진동을 사용할 수 있는 객체를 생성
@@ -299,32 +431,6 @@ public class MainActivity extends AppCompatActivity {
         //Log.i(TAG, "진동 피드백 On");
         mosVib.VidStart(customTimings_vib, customAmplitudes_vib);  // 진동 시작
         //Log.i(TAG, "진동 Off");
-    }
-
-    public void lightMode(String morseString, int LongTime, int ShortTime, int TermTime) {
-        //Log.i(TAG, "플래시 On, morseString : " + morseString);
-        MosLight mosLight = new MosLight(getApplicationContext(), cameraVersion);  // 빛을 사용할 수 있는 객체를 생성
-        long[] customTimings_light = new long[resultText.length()];
-        int[] customOnOff_light = new int[resultText.length()];  // 1 = on, 0 = off
-        int tempCount = 0;
-
-        for (char temp : morseString.toCharArray()) {  // 모스 부호 분석해서 타이밍 맞추기
-            //Log.i(TAG, "temp : " + temp);
-            if (temp == '-') {
-                customTimings_light[tempCount] = LongTime;
-                customOnOff_light[tempCount] = 1;
-            } else if (temp == '*') {
-                customTimings_light[tempCount] = ShortTime;
-                customOnOff_light[tempCount] = 1;
-            } else {
-                customTimings_light[tempCount] = ShortTime;
-                customOnOff_light[tempCount] = 0;
-            }
-            tempCount += 1;
-        }
-        //Log.i(TAG, "플래시 피드백 On");
-        mosLight.LightStart(customTimings_light, customOnOff_light, TermTime);  // 플래시 시작
-        //Log.i(TAG, "플래시 Off");
     }
 
     public void soundMode(String morseString, int LongTime, int ShortTime, int TermTime, int soundTrackNum) {
@@ -374,6 +480,7 @@ public class MainActivity extends AppCompatActivity {
 
     // 옵션 메뉴 ===================================================================================
     Menu menu;
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater menuInflater = getMenuInflater();
@@ -415,7 +522,7 @@ public class MainActivity extends AppCompatActivity {
                     if (!lightGranted) {
                         requestPermissions(permission, 1);  // 권한 신청 (카메라)
                     }
-                } else if(cameraVersion == 2){  // 그 이상은 카메라 권한이 필요없음 (카메라 2 API 사용)
+                } else if (cameraVersion == 2) {  // 그 이상은 카메라 권한이 필요없음 (카메라 2 API 사용)
                     lightGranted = true;
                 }
 
@@ -557,7 +664,7 @@ public class MainActivity extends AppCompatActivity {
         for (int i = 0; i < character.length; i++) {
             Log.i(TAG, "character[" + i + "] : " + character[i]);  // 단어 단위 출력
 
-            if(character[i].equals(" ")){  // 띄어쓰기일 경우
+            if (character[i].equals(" ")) {  // 띄어쓰기일 경우
                 encode.append(" ");
                 continue;
             }
@@ -935,7 +1042,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // 광고 ========================================================================================
-    private void Ad(){
+    private void Ad() {
         final String adTag = "Ad()";
         MobileAds.initialize(this, getString(R.string.banner_ad_unit_id));
         mAdView = findViewById(R.id.adView);
@@ -1030,7 +1137,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         if (null != appLicenseChecker)
-            appLicenseChecker.destroy();
+            appLicenseChecker.destroy();  // ALC 연결 해제
         super.onDestroy();
     }
 }
