@@ -185,7 +185,7 @@ public class MainActivity extends AppCompatActivity {
 
         // 원스토어 라이센스 체크 ------------------------------------------------------------------
         if(true) {
-            appLicenseChecker = new AppLicenseChecker(MainActivity.this, getString(R.string.public_key), new AppLicenseListener());
+            appLicenseChecker = new AppLicenseChecker(MainActivity.this, getString(R.string.license_key), new AppLicenseListener());
             //Flexible
             appLicenseChecker.queryLicense();  // queryLicense()를 통해서 라이센스 체크 요청
         }
@@ -252,7 +252,7 @@ public class MainActivity extends AppCompatActivity {
     private void deniedDialog() {
         showDialog(getString(R.string.does_not_exist), "ok", "finish", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface arg0, int arg1) {
-                Intent marketIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.goto_app_market_url)));
+                Intent marketIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.download_onestore_service_url)));
                 startActivity(marketIntent);
                 finish();
             }
@@ -291,7 +291,7 @@ public class MainActivity extends AppCompatActivity {
     private void retryALC() {
         Log.i(TAG, "retryALC()");
         if (null == appLicenseChecker)
-            appLicenseChecker = new AppLicenseChecker(MainActivity.this, getString(R.string.public_key), new AppLicenseListener());
+            appLicenseChecker = new AppLicenseChecker(MainActivity.this, getString(R.string.license_key), new AppLicenseListener());
         appLicenseChecker.queryLicense();
     }
 

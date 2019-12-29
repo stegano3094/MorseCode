@@ -23,14 +23,13 @@
     <string name="dev_v_title">Version Information</string>
     <string name="dev_v_summary">Version</string>
 
-
     <!-- AD Banner -->
     <string name="admob_app_id">ca-app-pub-9382651871536803~2537844255</string>
     <string name="banner_ad_unit_id">ca-app-pub-9382651871536803/3359971335</string>
     <string name="banner_ad_unit_id_for_test">ca-app-pub-3940256099942544/6300978111</string>
 
     <!-- ALC(Application License Checker) -->
-    <string name="public_key">MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCPtgieYEnqpjqH16/+TCXaMb2wXBFXb3JpJbrUZN7GOscg33x9uo7QUW5D9nAc3xJDm+b+1TLo4I4EtoGSuZg2A1stHQ0rK68qocKBB6VaP3kWqVp3YD8aHQXe+/fnwdlmBAVbeSAWvgjp2PZcH1B18x8R94CsLTS/YrlgsuOdtwIDAQAB</string>
+    <string name="license_key">MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCPtgieYEnqpjqH16/+TCXaMb2wXBFXb3JpJbrUZN7GOscg33x9uo7QUW5D9nAc3xJDm+b+1TLo4I4EtoGSuZg2A1stHQ0rK68qocKBB6VaP3kWqVp3YD8aHQXe+/fnwdlmBAVbeSAWvgjp2PZcH1B18x8R94CsLTS/YrlgsuOdtwIDAQAB</string>
     <string name="app_market_detail_url">https://onestore.co.kr/userpoc/apps/view?pid=</string>
     <string name="goto_app_market_url">https://onestore.co.kr/userpoc/apps/</string>
     <string name="download_onestore_service_url">https://m.onestore.co.kr/mobilepoc/etc/downloadGuide.omp</string>
