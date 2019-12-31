@@ -391,10 +391,16 @@ public class MainActivity extends AppCompatActivity {
     // 동시 수행을 위한 스레드 =====================================================================
     public class FeedbackThread extends Thread {
         private static final String TAG = "FeedbackThread";
+        /*
+        출처 : 두산백과, http://www.doopedia.co.kr/doopedia/master/master.do?_method=view&MAS_IDX=101013000751516
+        국제간에 협정된 모스부호의 구성은 다음 규칙에 따르도록 규약되어 있다.
+        ① 선(dash)의 길이는 점(dot)의 3배일 것, ② 한 자를 형성하는 선과 점 사이의 간격은 1점과 같을 것,
+        ③ 문자와 문자의 간격은 3점과 같을 것, ④ 어(語)와 어의 간격은 7점과 같을 것 등이다.
+         */
+        int LongTime = 25 * 3;  // 선(dash)
+        int ShortTime = 25;  // 점(dot)
+        int TermTime = 25;  // 선과 점 사이의 간격은 1점과 같을 것
         int Amp = 150;
-        int LongTime = 50;
-        int ShortTime = 25;
-        int TermTime = 25;
         int runNum;
         int soundTrackNum;
         String morseString = resultText.getText().toString();  // 현재 결과 가져옴
