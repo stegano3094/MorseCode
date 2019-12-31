@@ -20,7 +20,12 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.animation.AlphaAnimation;
+import android.view.animation.Animation;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -32,12 +37,15 @@ import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.MobileAds;
+import com.google.android.material.snackbar.Snackbar;
 import com.jaredrummler.materialspinner.MaterialSpinner;
 import com.onestore.app.licensing.AppLicenseChecker;
 import com.onestore.app.licensing.LicenseCheckerListener;
 
 import java.util.TreeMap;
 import java.util.regex.Pattern;
+
+import at.markushi.ui.CircleButton;
 
 public class MainActivity extends AppCompatActivity {
     String TAG = "MainActivity";
@@ -50,6 +58,13 @@ public class MainActivity extends AppCompatActivity {
     TextView resultText;
     EditText editText;
     MaterialSpinner spinner;
+    LinearLayout buttonLayout;
+    Button dot;
+    Button dash;
+    Button space_bar;
+    Button delete;
+    CircleButton playButton;
+    ScrollView scrollView;
 
     FeedbackThread feedbackThread_vid = null;
     FeedbackThread feedbackThread_light = null;
@@ -78,7 +93,7 @@ public class MainActivity extends AppCompatActivity {
     private AdView mAdView;  // 광고뷰
 
     private AppLicenseChecker appLicenseChecker;  // 원스토어에서 라이센스 체크하도록
-    private static String PID;
+    private static String PID;  // 원스토어의 PID
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -88,11 +103,28 @@ public class MainActivity extends AppCompatActivity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);   // 화면꺼짐 방지
         backPressCloseHandler = new BackPressCloseHandler(this);      // 뒤로가기 버튼
 
+        // 광고 ------------------------------------------------------------------------------------
+        if (false) {
+            // TODO: 플레이 스토어 등록시 테스트 진행
+            Ad();  // 구글의 플레이 스토어에 등록시 사용 가능함
+        }
+
+        // 원스토어 라이센스 체크 ------------------------------------------------------------------
+        if (true) {
+            appLicenseChecker = new AppLicenseChecker(MainActivity.this, getString(R.string.license_key), new AppLicenseListener());
+            //Flexible
+            appLicenseChecker.queryLicense();  // queryLicense()를 통해서 라이센스 체크 요청
+        }
+
         languageAvailable = getResources().getStringArray(R.array.TranslationLanguage);  // 가능한 언어
         noResultData = getResources().getString(R.string.no_result_data);
         resultText = (TextView) findViewById(R.id.textView7);
         resultText.setText(noResultData);  // 초기화
+        scrollView = (ScrollView) findViewById(R.id.scroll_view);
+
         editText = (EditText) findViewById(R.id.editText);
+        buttonLayout = (LinearLayout) findViewById(R.id.button_layout);
+        playButton = (CircleButton) findViewById(R.id.play_button);
 
         MorseEnglish = new TreeMap<String, String>();
         MorseKorean = new TreeMap<String, String>();
@@ -115,6 +147,46 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // 버튼으로 입력 ---------------------------------------------------------------------------
+        dot = (Button) findViewById(R.id.dot);
+        dash = (Button) findViewById(R.id.dash);
+        space_bar = (Button) findViewById(R.id.spacebar);
+        delete = (Button) findViewById(R.id.delete);
+        dot.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                editText.append("*");
+            }
+        });
+        dash.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                editText.append("-");
+            }
+        });
+        space_bar.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                editText.append(" ");
+            }
+        });
+        delete.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (editText.length() > 0) {
+                    editText.setText(editText.getText().toString().substring(0, editText.length() - 1));
+                    editText.setSelection(editText.length());  // 커서 위치 이동
+                }
+            }
+        });
+        delete.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                editText.setText("");
+                return true;
+            }
+        });
+
         // 실시간 번역 -----------------------------------------------------------------------------
         mUpdateThread = new UpdateThread();  // 스레드 생성
         editText.addTextChangedListener(new TextWatcher() {
@@ -129,6 +201,8 @@ public class MainActivity extends AppCompatActivity {
                 Log.i(TAG, "===========================================================");
                 Log.i(TAG, "Origin Data : " + str);
                 mUpdateThread.run(str);  // 입력 값이 바뀔 때마다 UI 업데이트 시켜줌
+
+                scrollView.fullScroll(ScrollView.FOCUS_DOWN);  // 결과볼 때 스크롤을 아래로 내려줌
             }
 
             @Override
@@ -138,7 +212,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // 피드백 (빛, 진동) -----------------------------------------------------------------------
-        resultText.setOnClickListener(new View.OnClickListener() {
+        playButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 int runNum;
@@ -174,21 +248,11 @@ public class MainActivity extends AppCompatActivity {
                             feedbackThread_sound.start();
                         }
                     }
+                } else {
+                    Snackbar.make(v, "진행중 입니다.", Snackbar.LENGTH_SHORT).show();
                 }
             }
         });
-
-        // 광고 ------------------------------------------------------------------------------------
-        if(true) {
-            Ad();
-        }
-
-        // 원스토어 라이센스 체크 ------------------------------------------------------------------
-        if(true) {
-            appLicenseChecker = new AppLicenseChecker(MainActivity.this, getString(R.string.license_key), new AppLicenseListener());
-            //Flexible
-            appLicenseChecker.queryLicense();  // queryLicense()를 통해서 라이센스 체크 요청
-        }
     }
 
     // 원스토어 라이센스 체크 ======================================================================
@@ -592,6 +656,9 @@ public class MainActivity extends AppCompatActivity {
                 ", parseInt : " + Integer.parseInt(savedLanguage) + ", savedPlayLength : " + savedPlayLength + ", savedSave : " + savedSave);
 
         spinner.setSelectedIndex(Integer.parseInt(savedLanguage));  // 기본 언어 설정 (스피너 글씨만 세팅)
+        Log.i(TAG, "selected : " + languageAvailable[spinner.getSelectedIndex()]);
+        ChangeMode(languageAvailable[spinner.getSelectedIndex()]);
+
         languageState = languageAvailable[Integer.parseInt(savedLanguage)];  // 기본 언어 설정 (변환할 때 사용됨)
         speed = savedPlayLength + 3;  // 재생 길이 설정 (+는 시간 조금 더 늦추기 위함, 너무 빠르면 소리 재생이 안됌)
 
@@ -633,20 +700,41 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // 모드 변경 ===================================================================================
+    String preState = "";
+
     private void ChangeMode(String getMode) {
         languageState = "";
         languageState = getMode;
 
+        Animation animation_visible = new AlphaAnimation(0, 1);  // View 가시성에 애니메이션 넣기, 생기기
+        Animation animation_gone = new AlphaAnimation(1, 0);  // 사라지기
+        animation_visible.setDuration(400);
+        animation_gone.setDuration(400);
+
         if (languageState.equals(languageAvailable[1]) || languageState.equals(languageAvailable[2]) ||
                 languageState.equals(languageAvailable[3])) {  // 모스부호 -> 영어, 한국어, 숫자 등 으로 변환
-            editText.setHint("Input Morse Data");
+            editText.setHint(getString(R.string.edit_text_morse_hint));
             editText.setText("");
-            Toast.makeText(getApplicationContext(), "모스부호를 입력하세요.", Toast.LENGTH_SHORT).show();
+
+            playButton.setVisibility(View.GONE);
+            buttonLayout.setVisibility(View.VISIBLE);  // 모스부호 입력을 위해서 간편버튼 보이기
+
+            if (preState.equals(languageAvailable[0])) {  // 이전 값이 0번이 아닐때는 애니메이션 보이지않기
+                playButton.setAnimation(animation_gone);
+                buttonLayout.setAnimation(animation_visible);
+            }
+            //Toast.makeText(getApplicationContext(), "모스부호를 입력하세요.", Toast.LENGTH_SHORT).show();
         } else if (languageState.equals(languageAvailable[0])) {  // 영어, 한국어, 숫자 등 -> 모스부호로 변환
-            editText.setHint("Input Data");
+            editText.setHint(getString(R.string.edit_text_char_hint));
             editText.setText("");
-            Toast.makeText(getApplicationContext(), "영어 또는 한국어를 입력하세요.", Toast.LENGTH_SHORT).show();
+            playButton.setVisibility(View.VISIBLE);
+            buttonLayout.setVisibility(View.GONE);  // 버튼 숨기기
+
+            playButton.setAnimation(animation_visible);
+            buttonLayout.setAnimation(animation_gone);
+            //Toast.makeText(getApplicationContext(), "영어 또는 한국어를 입력하세요.", Toast.LENGTH_SHORT).show();
         }
+        preState = languageState;
         //Log.i(TAG, "languageState : " + languageState);
     }
 
@@ -664,10 +752,6 @@ public class MainActivity extends AppCompatActivity {
         for (int i = 0; i < character.length; i++) {
             Log.i(TAG, "character[" + i + "] : " + character[i]);  // 단어 단위 출력
 
-            if (character[i].equals(" ")) {  // 띄어쓰기일 경우
-                encode.append(" ");
-                continue;
-            }
 
             boolean englishPattern = Pattern.matches("^[a-zA-Z]*$", character[i]);
             boolean koreanPattern = Pattern.matches("^[ㄱ-ㅎㅏ-ㅣ가-힣]*$", character[i]);
@@ -676,6 +760,11 @@ public class MainActivity extends AppCompatActivity {
             Log.i(TAG, "englishPattern : " + englishPattern + ", koreanPattern : " + koreanPattern +
                     ", numberPattern : " + numberPattern + ", specialCharacterPattern : " + specialCharacterPattern);
 
+            if (character[i].equals(" ")) {  // 띄어쓰기일 경우 ------------------------------------
+                encode.append(" ");
+                Log.i(TAG, "space bar");
+                continue;
+            }
             if (numberPattern) {  // 숫자 -> 모스부호 ----------------------------------------------
                 for (String key : MorseNumber.keySet()) {
                     if (character[i].equals(key)) {
@@ -804,10 +893,6 @@ public class MainActivity extends AppCompatActivity {
 
             for (int i = 0; i < getSlice.length; i++) {
                 Log.i(TAG, "getSlice.length : " + getSlice.length + ", getSlice[" + i + "] : " + getSlice[i]);
-                if (getSlice[i].equals("")) {  // 띄어쓰기는 지워지고 배열이 증가하여 다시 띄어쓰기를 넣어줌
-                    decode.append(" ");
-                    continue;
-                }
                 String KorValue = "";
 
                 if (languageState.equals(languageAvailable[1])) {  // 모스부호 -> 영어 ===========================
@@ -829,6 +914,9 @@ public class MainActivity extends AppCompatActivity {
                                 break;
                             }
                         }
+                    } else if (getSlice[i].equals("")) {  // 띄어쓰기일 경우
+                        Log.i(TAG, "space bar");
+                        decode.append(" ");
                     } else {  // * 또는 - 문자이지만 데이터에 없는 경우
                         decode.delete(0, decode.length());
                         decode.append("Not supported or not found in the data.");
@@ -866,6 +954,9 @@ public class MainActivity extends AppCompatActivity {
                                 break;
                             }
                         }
+                    } else if (getSlice[i].equals("")) {  // 띄어쓰기일 경우
+                        Log.i(TAG, "space bar");
+                        checkKorStr += " ";
                     } else {  // * 또는 - 문자이지만 데이터에 없는 경우
                         decode.delete(0, decode.length());
                         decode.append("Not supported or not found in the data.");
@@ -896,6 +987,9 @@ public class MainActivity extends AppCompatActivity {
                                 break;
                             }
                         }
+                    } else if (getSlice[i].equals("")) {  // 띄어쓰기일 경우
+                        Log.i(TAG, "space bar");
+                        decode.append(" ");
                     } else {  // * 또는 - 문자이지만 데이터에 없는 경우
                         decode.delete(0, decode.length());
                         decode.append("Not supported or not found in the data.");
@@ -1044,9 +1138,20 @@ public class MainActivity extends AppCompatActivity {
     // 광고 ========================================================================================
     private void Ad() {
         final String adTag = "Ad()";
+
+        /*
+        MobileAds.initialize(this, new OnInitializationCompleteListener() {
+            @Override
+            public void onInitializationComplete(InitializationStatus initializationStatus) {
+            }
+        });
+         */
+
         MobileAds.initialize(this, getString(R.string.banner_ad_unit_id));
-        mAdView = findViewById(R.id.adView);
-        AdRequest adRequest = new AdRequest.Builder().build();
+        mAdView = (AdView) findViewById(R.id.adView);
+        AdRequest adRequest = new AdRequest.Builder()
+                .addTestDevice("D7F549242996FB04A9CC6FF550697DE2")
+                .build();
         mAdView.loadAd(adRequest);
 
         // 광고가 제대로 로드 되는지 테스트 하기 위한 코드

@@ -1,7 +1,7 @@
 <resources>
     <!-- TranslationLanguage -->
     <string-array name="TranslationLanguage">
-        <item>언어 -> 모스부호</item>
+        <item>문자 -> 모스부호</item>
         <item>모스부호 -> 영어</item>
         <item>모스부호 -> 한국어</item>
         <item>모스부호 -> 숫자</item>

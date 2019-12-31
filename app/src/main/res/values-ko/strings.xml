@@ -4,6 +4,8 @@
     <string name="actionbar_title_activity_info">코드북</string>
 
     <string name="no_result_data">출력 결과가 없습니다.</string>
+    <string name="edit_text_morse_hint">모스부호를 입력하세요.</string>
+    <string name="edit_text_char_hint">문자를 입력하세요.</string>
 
     <!-- Preference Titles -->
     <string name="set_header">설정</string>
@@ -24,8 +26,8 @@
     <string name="dev_v_summary">Version</string>
 
     <!-- AD Banner -->
-    <string name="admob_app_id">ca-app-pub-9382651871536803~2537844255</string>
-    <string name="banner_ad_unit_id">ca-app-pub-9382651871536803/3359971335</string>
+    <string name="admob_app_id">ca-app-pub-9382651871536803~4484177286</string>
+    <string name="banner_ad_unit_id">ca-app-pub-9382651871536803/9252454086</string>
     <string name="banner_ad_unit_id_for_test">ca-app-pub-3940256099942544/6300978111</string>
 
     <!-- ALC(Application License Checker) -->
